@@ -32,9 +32,13 @@ message HubMessage {
     // First message on every (re)connect.
     HubHello hello = 1;
     // Terminal traffic: ticks, trade events, heartbeats, command results,
-    // logs, depth, plus hub-generated TerminalStatus transitions. A slow
-    // engine drops the oldest events rather than stalling terminal
-    // sessions.
+    // logs, depth, plus hub-generated TerminalStatus transitions. Delivery
+    // is two-lane: high-rate market data (tick_batch, market_depth,
+    // heartbeat) is dropped oldest-first when the engine reads slowly, so
+    // terminal sessions are never stalled; everything else (trade events,
+    // statuses, command results, logs, hello) is queued losslessly for the
+    // life of the link. Ordering is preserved within each lane, not across
+    // lanes.
     EngineEvent event = 2;
     // Answer to an EngineMessage.request, matched by request_id.
     EngineResponse response = 3;
