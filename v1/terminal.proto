@@ -10,49 +10,52 @@ option java_outer_classname = "TerminalProto";
 
 import "fleet/v1/common.proto";
 
-// TerminalService is the internal-facing service that MetaTrader connectors
-// (the Fleet EA + bridge DLL running inside the terminal) connect to.
+// TerminalService is the service your ENGINE implements; MetaTrader
+// connectors (the Fleet EA + bridge DLL running inside each terminal)
+// connect to it directly. fleetd only provisions/manages the terminals and
+// stamps the engine address + terminal id into each home; it carries no
+// terminal traffic.
 //
-// Connectors dial OUT to the hub and hold a single long-lived bidirectional
-// stream: the hub sends commands down, the connector sends events (ticks,
+// Connectors dial OUT to the engine and hold a single long-lived bidirectional
+// stream: the engine sends commands down, the connector sends events (ticks,
 // command results, trade events, heartbeats) up.
 //
 // Session contract:
-//   1. The first TerminalEvent MUST be `hello`. The hub answers with a
+//   1. The first TerminalEvent MUST be `hello`. The engine answers with a
 //      TerminalCommand whose payload is `welcome` (or closes the stream with
 //      a gRPC status: ALREADY_EXISTS for a duplicate terminal_id,
 //      FAILED_PRECONDITION for a platform mismatch). An unknown terminal_id
-//      is NOT an error: the hub self-registers the terminal from the Hello
+//      is NOT an error: the engine self-registers the terminal from the Hello
 //      fields (terminal-first onboarding; the connector self-assigns a
-//      stable id and reachability of the internal listener is the trust
-//      boundary).
+//      stable id when fleetd has not stamped one, and transport-level
+//      security is the trust boundary).
 //   2. After `welcome`, both sides may send freely. The connector MUST send
-//      `heartbeat` at least every `Welcome.heartbeat_interval_ms`; the hub
+//      `heartbeat` at least every `Welcome.heartbeat_interval_ms`; the engine
 //      treats a missed interval x3 as a dead session.
 //   3. Every TerminalCommand with a non-empty command_id MUST eventually be
 //      answered with exactly one CommandResult carrying the same command_id,
 //      even on failure or timeout.
-//   4. Reconnects start a brand-new session (new Hello). The hub is the
+//   4. Reconnects start a brand-new session (new Hello). The engine is the
 //      source of truth for desired subscriptions and re-issues them after
-//      the handshake; connectors keep no cross-session state. The hub also
-//      downloads the terminal's full symbol catalog (get_symbol_info with no
-//      filter) after every handshake and persists it for instrument mapping.
+//      the handshake; connectors keep no cross-session state. The engine
+//      SHOULD download the terminal's full symbol catalog (get_symbol_info
+//      with no filter) after every handshake if it needs instrument mapping.
 //
-// The same service serves MT4 and MT5; `Hello.platform` tells the hub which
-// dialect the connector speaks, and the hub rejects commands the platform
+// The same service serves MT4 and MT5; `Hello.platform` tells the engine which
+// dialect the connector speaks, and the engine rejects commands the platform
 // cannot execute with ERROR_CODE_UNSUPPORTED.
 service TerminalService {
   rpc Session(stream TerminalEvent) returns (stream TerminalCommand);
 }
 
-// TerminalEvent flows connector -> hub.
+// TerminalEvent flows connector -> engine.
 message TerminalEvent {
   // Stable identifier of the terminal, assigned at provisioning time.
-  // Set on every message so the hub can route/validate cheaply.
+  // Set on every message so the engine can route/validate cheaply.
   string terminal_id = 1;
 
   // Monotonically increasing per-session sequence number, starting at 1.
-  // Lets the hub detect gaps/reordering in connector pipelines and dedupe
+  // Lets the engine detect gaps/reordering in connector pipelines and dedupe
   // after internal retries.
   uint64 sequence = 2;
 
@@ -71,7 +74,7 @@ message TerminalEvent {
   }
 }
 
-// TerminalCommand flows hub -> connector.
+// TerminalCommand flows engine -> connector.
 message TerminalCommand {
   // Correlates CommandResult back to the originating client request.
   // Empty only for fire-and-forget payloads (welcome, ping).
@@ -104,9 +107,9 @@ message TerminalCommand {
   }
 }
 
-// Hello registers the connector with the hub. The session is identified
+// Hello registers the connector with the engine. The session is identified
 // solely by TerminalEvent.terminal_id; there is no application-level
-// authentication (run the hub on a trusted network, or add transport-level
+// authentication (run the engine on a trusted network, or add transport-level
 // security such as TLS/mTLS if exposure requires it).
 message Hello {
   reserved 1;
@@ -116,12 +119,12 @@ message Hello {
   string connector_version = 4;  // Fleet EA/bridge semantic version
   int64 account_login = 5;
   string broker_server = 6;
-  // Minutes east of UTC for the broker/server time, so the hub can translate
+  // Minutes east of UTC for the broker/server time, so the engine can translate
   // bar times without guessing (e.g. 120 for UTC+2).
   int32 server_tz_offset_minutes = 7;
 }
 
-// Welcome is the hub's handshake acknowledgement. It is the first command on
+// Welcome is the engine's handshake acknowledgement. It is the first command on
 // a healthy stream and carries session-scoped settings.
 message Welcome {
   string session_id = 1;            // unique per connection, for log correlation
@@ -134,13 +137,13 @@ message Welcome {
 
 message Heartbeat {
   int64 unix_ms = 1;
-  // Snapshot of cheap health metrics so the hub can monitor without polling.
+  // Snapshot of cheap health metrics so the engine can monitor without polling.
   bool terminal_connected = 2;  // terminal <-> broker link state
   double equity = 3;
   double balance = 4;
   int32 pending_orders = 6;
   // Full open-position snapshot; Position.profit carries the floating PnL,
-  // so the hub mirrors exposure passively without polling get_positions.
+  // so the engine mirrors exposure passively without polling get_positions.
   repeated Position positions = 7;
 
   // Was `int32 open_positions`, superseded by the full `positions` list.
@@ -343,7 +346,7 @@ message OrderResult {
 
 // TradeEvent is pushed by the connector whenever the account's trade state
 // changes (fills, SL/TP hits, manual trades in the terminal, expirations),
-// so the hub mirrors state without polling.
+// so the engine mirrors state without polling.
 message TradeEvent {
   enum Kind {
     KIND_UNSPECIFIED = 0;
@@ -370,7 +373,7 @@ message AccountEvent {
   AccountInfo account = 1;
 }
 
-// LogEvent forwards noteworthy connector-side diagnostics to the hub.
+// LogEvent forwards noteworthy connector-side diagnostics to the engine.
 message LogEvent {
   enum Level {
     LEVEL_UNSPECIFIED = 0;

@@ -1,6 +1,6 @@
 # fleet-proto
 
-gRPC contract of the **Fleet hub** — the MT4/MT5 terminal fleet system
+gRPC contract of **Fleet** — the MT4/MT5 terminal fleet system
 ([ultimatesoftwares/fleet](https://github.com/ultimatesoftwares/fleet)). This
 repo is the single source of truth; consumers vendor it (typically as a git
 submodule) and generate code locally.
@@ -10,15 +10,20 @@ submodule) and generate code locally.
 | File | Package | Served by | Dialed by |
 |---|---|---|---|
 | `v1/common.proto` | `fleet.v1` | — (shared types) | — |
-| `v1/terminal.proto` → `TerminalService` | `fleet.v1` | the hub | EA connectors (FleetBridge.dll inside each terminal) |
-| `v1/engine.proto` → `EngineGateway` | `fleet.v1` | **your engine** | the hub |
+| `v1/terminal.proto` → `TerminalService` | `fleet.v1` | **your engine** | EA connectors (FleetBridge.dll inside each terminal) |
 
-Note the direction of `EngineGateway`: the engine hosts the gRPC server and
-the hub connects *out* to it (`rpc Link(stream HubMessage) returns (stream
-EngineMessage)`). The hub introduces itself with `HubHello`, streams terminal
-status snapshots and live events, and answers `ListTerminals`/`Execute`
-requests correlated by `request_id`. An engine implements exactly one
-service and treats every inbound `Link` as a hub coming online.
+The direction matters: the engine hosts the `TerminalService` gRPC server
+and every terminal connector dials *out* to it, holding one long-lived
+bidirectional stream (`rpc Session(stream TerminalEvent) returns (stream
+TerminalCommand)`). The connector introduces itself with `Hello`
+(terminal id, platform, account), the engine answers with `welcome`, then
+commands flow down and events (ticks, trade events, heartbeats, command
+results) flow up. The full session contract is documented on
+`TerminalService` in `v1/terminal.proto`.
+
+`fleetd` (the Linux daemon in the main repo) provisions and supervises the
+terminals and stamps the engine address + terminal id into each terminal
+home; it does not speak this protocol itself.
 
 ## Include-root convention
 
@@ -37,23 +42,23 @@ git submodule add https://github.com/ultimatesoftwares/fleet-proto.git protos/fl
 protoc -I protos \
   protos/fleet/v1/common.proto \
   protos/fleet/v1/terminal.proto \
-  protos/fleet/v1/engine.proto \
   --<lang>_out=...
 ```
 
 ### C# (Grpc.Tools)
 
 ```xml
-<Protobuf Include="protos/fleet/v1/engine.proto" ProtoRoot="protos" GrpcServices="Server" />
+<Protobuf Include="protos/fleet/v1/common.proto" ProtoRoot="protos" GrpcServices="None" />
+<Protobuf Include="protos/fleet/v1/terminal.proto" ProtoRoot="protos" GrpcServices="Server" />
 ```
 
-(`GrpcServices="Server"` for an engine — it hosts `EngineGateway`.)
+(`GrpcServices="Server"` for an engine — it hosts `TerminalService`.)
 
 ### Rust (tonic-build)
 
 ```rust
 tonic_build::configure().compile_protos(
-    &["protos/fleet/v1/common.proto", "protos/fleet/v1/engine.proto"],
+    &["protos/fleet/v1/common.proto", "protos/fleet/v1/terminal.proto"],
     &["protos"],
 )?;
 ```
