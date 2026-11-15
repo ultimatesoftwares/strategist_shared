@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "3T66DdkiqhI=",
+  "success": true,
+  "projectFilePath": "/home/cowanweks/Projects/strategist/shared/Contracts/Contracts.csproj",
+  "expectedPackageFiles": [
+    "/home/cowanweks/.nuget/packages/microsoft.netcore.app.ref/10.0.15/microsoft.netcore.app.ref.10.0.15.nupkg.sha512",
+    "/home/cowanweks/.nuget/packages/microsoft.aspnetcore.app.ref/10.0.15/microsoft.aspnetcore.app.ref.10.0.15.nupkg.sha512"
+  ],
+  "logs": []
+}

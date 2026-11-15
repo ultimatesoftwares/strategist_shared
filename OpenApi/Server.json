@@ -1,0 +1,5328 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Strategist Server API",
+    "description": "REST surface of the Strategist trading server: the GUI API (attribute-routed controllers in Server/Controllers) plus externally-driven flows (OAuth callbacks, public media). Streaming (engine-state feed) and the slave links ride gRPC.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/venues/alpaca": {
+      "post": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/AlpacaVenue"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/alpaca/{id}/symbols": {
+      "get": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_VenueSymbols",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/alpaca/{id}": {
+      "get": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/AlpacaVenue"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AlpacaVenues"
+        ],
+        "operationId": "AlpacaVenues_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ctrader/oauth/url": {
+      "get": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_GetUrl",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CtraderOAuthUrlModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctrader/oauth/callback": {
+      "get": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_Callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/ctrader/{id}/symbols": {
+      "get": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_VenueSymbols",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/ctrader": {
+      "get": {
+        "tags": [
+          "CTraderVenues"
+        ],
+        "operationId": "CTraderVenues_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CTraderVenues"
+        ],
+        "operationId": "CTraderVenues_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/CTraderVenue"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/ctrader/{id}": {
+      "get": {
+        "tags": [
+          "CTraderVenues"
+        ],
+        "operationId": "CTraderVenues_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "CTraderVenues"
+        ],
+        "operationId": "CTraderVenues_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/CTraderVenue"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "CTraderVenues"
+        ],
+        "operationId": "CTraderVenues_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/databento": {
+      "post": {
+        "tags": [
+          "DatabentoVenues"
+        ],
+        "operationId": "DatabentoVenues_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/AddRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/engine/state": {
+      "get": {
+        "tags": [
+          "EngineState"
+        ],
+        "operationId": "EngineState_Snapshot",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/fleet": {
+      "get": {
+        "tags": [
+          "Fleet"
+        ],
+        "operationId": "Fleet_List",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FleetMemberRow"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fleet/{memberId}/backtests": {
+      "get": {
+        "tags": [
+          "Fleet"
+        ],
+        "operationId": "Fleet_Backtests",
+        "parameters": [
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/fleet": {
+      "post": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/FleetVenueRegistration"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/fleet/{id}/instruments": {
+      "get": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_Instruments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/fleet/{id}/symbols": {
+      "get": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_VenueSymbols",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/fleet/{id}": {
+      "get": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/FleetVenueRegistration"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "FleetVenues"
+        ],
+        "operationId": "FleetVenues_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/sources": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Sources",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/candles": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Candles",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/ticks": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Ticks",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/timeframes": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Timeframes",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/symbols": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Symbols",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/symbol-id": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_SymbolId",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provision/jobs": {
+      "post": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_StartProvisionJob",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_ProvisionJobs",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provision/jobs/{id}": {
+      "delete": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_DeleteProvisionJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provision/jobs/{id}/retry": {
+      "post": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_RetryProvisionJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provision": {
+      "post": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Provision",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provisioned": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_Provisioned",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_DeleteProvisioned",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/historical/provisioned/candles": {
+      "get": {
+        "tags": [
+          "Historical"
+        ],
+        "operationId": "Historical_ProvisionedCandles",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/icons/{symbol}": {
+      "post": {
+        "tags": [
+          "InstrumentIcons"
+        ],
+        "operationId": "InstrumentIcons_Upload",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "InstrumentIcons"
+        ],
+        "operationId": "InstrumentIcons_Remove",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/Instrument"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/Instrument"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals": {
+      "post": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/MetaTraderAccountRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Terminals",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals/{id}": {
+      "delete": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals/{id}/status": {
+      "get": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaTraderTerminalStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals/{id}/start": {
+      "post": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Start",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaTraderTerminalActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals/{id}/stop": {
+      "post": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Stop",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaTraderTerminalActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/terminals/{id}/restart": {
+      "post": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_Restart",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaTraderTerminalActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metatrader/servers/search": {
+      "get": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_SearchServers",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}/symbols": {
+      "get": {
+        "tags": [
+          "MetaTraderAccounts"
+        ],
+        "operationId": "MetaTraderAccounts_TerminalSymbols",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/model-replay/{instanceId}": {
+      "post": {
+        "tags": [
+          "ModelReplay"
+        ],
+        "operationId": "ModelReplay_Replay",
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/ReplayBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/summary": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Summary",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderSummaryRow"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orders/{id}/decision": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Decision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDecisionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "delete": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/delete": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "Orders_DeleteMany",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/package-backtests": {
+      "post": {
+        "tags": [
+          "PackageBacktests"
+        ],
+        "operationId": "PackageBacktests_Submit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "PackageBacktests"
+        ],
+        "operationId": "PackageBacktests_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/package-backtests/{id}": {
+      "get": {
+        "tags": [
+          "PackageBacktests"
+        ],
+        "operationId": "PackageBacktests_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "PackageBacktests"
+        ],
+        "operationId": "PackageBacktests_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/package-backtests/{id}/cancel": {
+      "post": {
+        "tags": [
+          "PackageBacktests"
+        ],
+        "operationId": "PackageBacktests_Cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/packages": {
+      "post": {
+        "tags": [
+          "Packages"
+        ],
+        "operationId": "Packages_Upload",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "operationId": "Packages_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/packages/{id}": {
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "operationId": "Packages_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Packages"
+        ],
+        "operationId": "Packages_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/positions": {
+      "get": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_List",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenuesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/positions/accounts": {
+      "get": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_Accounts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VenuesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/positions/daily-pnl": {
+      "get": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_DailyPnl",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 90
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyPnlResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/positions/closed": {
+      "get": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_Closed",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosedTradesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/positions/close": {
+      "post": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_Close",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/PositionActionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/positions/cancel": {
+      "post": {
+        "tags": [
+          "Positions"
+        ],
+        "operationId": "Positions_Cancel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/PositionActionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_Get",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_Update",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/password": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_ChangePassword",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/avatar": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_UploadAvatar",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_RemoveAvatar",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/mfa/setup": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_MfaSetup",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/mfa/enable": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_MfaEnable",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/mfa/disable": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_MfaDisable",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/profile/mfa/recovery-codes": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "Profile_MfaRecoveryCodes",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/documents": {
+      "get": {
+        "tags": [
+          "ProjectDocuments"
+        ],
+        "operationId": "ProjectDocuments_List",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ProjectDocuments"
+        ],
+        "operationId": "ProjectDocuments_Upload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/documents/{docId}": {
+      "get": {
+        "tags": [
+          "ProjectDocuments"
+        ],
+        "operationId": "ProjectDocuments_Download",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ProjectDocuments"
+        ],
+        "operationId": "ProjectDocuments_Remove",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/risk-policies": {
+      "get": {
+        "tags": [
+          "ProjectRiskPolicies"
+        ],
+        "operationId": "ProjectRiskPolicies_List",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ProjectRiskPolicies"
+        ],
+        "operationId": "ProjectRiskPolicies_Create",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/PolicyBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/risk-policies/{policyId}/activate": {
+      "post": {
+        "tags": [
+          "ProjectRiskPolicies"
+        ],
+        "operationId": "ProjectRiskPolicies_Activate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/risk-policies/{policyId}": {
+      "delete": {
+        "tags": [
+          "ProjectRiskPolicies"
+        ],
+        "operationId": "ProjectRiskPolicies_Remove",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/ProjectBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/ProjectBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/members": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_ListMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_AddMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/MemberBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/members/{memberId}": {
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_UpdateMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/MemberRoleBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_RemoveMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/activity": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_ListActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/strategies": {
+      "get": {
+        "tags": [
+          "ProjectStrategies"
+        ],
+        "operationId": "ProjectStrategies_List",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ProjectStrategies"
+        ],
+        "operationId": "ProjectStrategies_Link",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/LinkBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/strategies/{linkId}": {
+      "put": {
+        "tags": [
+          "ProjectStrategies"
+        ],
+        "operationId": "ProjectStrategies_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/LinkUpdateBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ProjectStrategies"
+        ],
+        "operationId": "ProjectStrategies_Unlink",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/strategies/{linkId}/approve": {
+      "post": {
+        "tags": [
+          "ProjectStrategies"
+        ],
+        "operationId": "ProjectStrategies_Approve",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/promotions": {
+      "get": {
+        "tags": [
+          "Promotions"
+        ],
+        "operationId": "Promotions_List",
+        "parameters": [
+          {
+            "name": "package_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/promotions/{packageId}": {
+      "get": {
+        "tags": [
+          "Promotions"
+        ],
+        "operationId": "Promotions_Get",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/promotions/{packageId}/advance": {
+      "post": {
+        "tags": [
+          "Promotions"
+        ],
+        "operationId": "Promotions_Advance",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/AdvanceBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/promotions/{packageId}/demote": {
+      "post": {
+        "tags": [
+          "Promotions"
+        ],
+        "operationId": "Promotions_Demote",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/DemoteBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/public/media/{key}": {
+      "get": {
+        "tags": [
+          "PublicMedia"
+        ],
+        "operationId": "PublicMedia_Get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/instances": {
+      "post": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/StrategyInstance"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/instances/{id}/stop": {
+      "post": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_Stop",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/instances/{id}": {
+      "delete": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "StrategyInstances"
+        ],
+        "operationId": "StrategyInstances_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/StrategyInstance"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/names": {
+      "get": {
+        "tags": [
+          "StrategyNames"
+        ],
+        "operationId": "StrategyNames_Names",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/token": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "operationId": "Token_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokenRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/token/logout": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "operationId": "Token_Logout",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/engine/trading-mode": {
+      "get": {
+        "tags": [
+          "TradingMode"
+        ],
+        "operationId": "TradingMode_Get",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "TradingMode"
+        ],
+        "operationId": "TradingMode_Set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "Users_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "Users_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/CreateUserBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/roles": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "Users_SetRoles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/RolesBody"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "Users_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog": {
+      "get": {
+        "tags": [
+          "VenueCatalog"
+        ],
+        "operationId": "VenueCatalog_Search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mapped",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog/search": {
+      "post": {
+        "tags": [
+          "VenueCatalog"
+        ],
+        "operationId": "VenueCatalog_QueueSearch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/CatalogSearchRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog/map": {
+      "post": {
+        "tags": [
+          "VenueCatalog"
+        ],
+        "operationId": "VenueCatalog_Map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/CatalogMapRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/venues/summary": {
+      "get": {
+        "tags": [
+          "VenuesSummary"
+        ],
+        "operationId": "VenuesSummary_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddRequest": {
+        "required": [
+          "apiKey",
+          "dataset",
+          "restUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "dataset": {
+            "type": "string",
+            "nullable": true
+          },
+          "restUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ApplicationUser"
+          },
+          "street": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "city": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "zipCode": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "country": {
+            "maxLength": 60,
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AdvanceBody": {
+        "required": [
+          "to_stage",
+          "note",
+          "confirm"
+        ],
+        "type": "object",
+        "properties": {
+          "to_stage": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "confirm": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            ]
+          }
+        }
+      },
+      "AlpacaVenue": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ApplicationUser"
+          },
+          "accountId": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "apiKey": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "apiSecret": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApplicationUser": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "avatarPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            }
+          },
+          "information": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/UserInformation"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string",
+            "nullable": true
+          },
+          "normalizedUserName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "normalizedEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailConfirmed": {
+            "type": "boolean"
+          },
+          "passwordHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "securityStamp": {
+            "type": "string",
+            "nullable": true
+          },
+          "concurrencyStamp": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumberConfirmed": {
+            "type": "boolean"
+          },
+          "twoFactorEnabled": {
+            "type": "boolean"
+          },
+          "lockoutEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lockoutEnabled": {
+            "type": "boolean"
+          },
+          "accessFailedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AssetClass": {
+        "type": "integer"
+      },
+      "CatalogMapRequest": {
+        "required": [
+          "catalogId",
+          "instrumentId"
+        ],
+        "type": "object",
+        "properties": {
+          "catalogId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "CatalogSearchRequest": {
+        "required": [
+          "accountKey",
+          "query"
+        ],
+        "type": "object",
+        "properties": {
+          "accountKey": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "ClosedTradeRow": {
+        "required": [
+          "id",
+          "symbol",
+          "side",
+          "quantity",
+          "entryPrice",
+          "exitPrice",
+          "realizedPnl",
+          "strategy",
+          "venueAccountKey",
+          "brokerPositionId",
+          "note",
+          "openedAt",
+          "closedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "entryPrice": {
+            "type": "number",
+            "format": "double"
+          },
+          "exitPrice": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "realizedPnl": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "venueAccountKey": {
+            "type": "string"
+          },
+          "brokerPositionId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "openedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ClosedTradesResponse": {
+        "required": [
+          "trades"
+        ],
+        "type": "object",
+        "properties": {
+          "trades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedTradeRow"
+            }
+          }
+        }
+      },
+      "ConfirmBody": {
+        "required": [
+          "package_hash",
+          "acknowledge"
+        ],
+        "type": "object",
+        "properties": {
+          "package_hash": {
+            "type": "string",
+            "nullable": true
+          },
+          "acknowledge": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateUserBody": {
+        "required": [
+          "userName",
+          "email",
+          "password",
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "street": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "zipCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CtraderOAuthUrlModel": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "CTraderVenue": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ApplicationUser"
+          },
+          "accountId": {
+            "maxLength": 100,
+            "type": "integer",
+            "format": "int64"
+          },
+          "broker": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "currency": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "accessToken": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "refreshToken": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "credentialsVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastRefreshError": {
+            "maxLength": 300,
+            "type": "string",
+            "nullable": true
+          },
+          "isMarketFeed": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DailyPnlResponse": {
+        "required": [
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyPnlRow"
+            }
+          }
+        }
+      },
+      "DailyPnlRow": {
+        "required": [
+          "date",
+          "trades",
+          "wins",
+          "losses",
+          "pnl"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "trades": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pnl": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "DeletedResponse": {
+        "required": [
+          "deleted"
+        ],
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DemoteBody": {
+        "required": [
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FeedInstance": {
+        "type": "object",
+        "properties": {
+          "venueInstanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "venueInstance": {
+            "$ref": "#/components/schemas/VenueInstance"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/VenuePlatform"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeedInstanceStatus"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeedInstanceStatus": {
+        "type": "integer"
+      },
+      "FleetMemberRow": {
+        "required": [
+          "memberId",
+          "capabilities",
+          "version",
+          "rttMs",
+          "load",
+          "connectedAt",
+          "lastSeenSeconds",
+          "os",
+          "cpu",
+          "cpuCores",
+          "ramMb",
+          "gpu"
+        ],
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "string"
+          },
+          "rttMs": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "load": {
+            "type": "number",
+            "format": "double"
+          },
+          "connectedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenSeconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "os": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpu": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpuCores": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ramMb": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "gpu": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FleetVenueRegistration": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "user": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/ApplicationUser"
+              }
+            ]
+          },
+          "venueId": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "restUrl": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "apiKey": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Gender": {
+        "type": "integer"
+      },
+      "Instrument": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "assetClass": {
+            "$ref": "#/components/schemas/AssetClass"
+          },
+          "baseCurrency": {
+            "maxLength": 10,
+            "type": "string",
+            "nullable": true
+          },
+          "quoteCurrency": {
+            "maxLength": 10,
+            "type": "string",
+            "nullable": true
+          },
+          "digits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "isTradable": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JsonElement": { },
+      "LinkBody": {
+        "required": [
+          "packageId",
+          "stage",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "stage": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "LinkUpdateBody": {
+        "required": [
+          "stage",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MemberBody": {
+        "required": [
+          "userId",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MemberRoleBody": {
+        "required": [
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MetaTraderAccountRequest": {
+        "required": [
+          "login",
+          "password",
+          "server",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "server": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "platform": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MetaTraderTerminal": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "login": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "password": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "server": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "user": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/ApplicationUser"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MetaTraderTerminalActionResponse": {
+        "required": [
+          "action",
+          "applied"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "applied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MetaTraderTerminalStatusResponse": {
+        "required": [
+          "id",
+          "phase",
+          "containerState",
+          "sessionConnected",
+          "lastHeartbeatUnixMs",
+          "stopped",
+          "screenAgentConnected",
+          "screenViewers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "containerState": {
+            "type": "string",
+            "nullable": true
+          },
+          "sessionConnected": {
+            "type": "boolean"
+          },
+          "lastHeartbeatUnixMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "stopped": {
+            "type": "boolean"
+          },
+          "screenAgentConnected": {
+            "type": "boolean"
+          },
+          "screenViewers": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ModelDecision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "instanceId": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "packageId": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "barTs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "step": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "inputJson": {
+            "type": "string"
+          },
+          "forecast": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "targetsJson": {
+            "type": "string"
+          },
+          "status": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "fired": {
+            "type": "boolean"
+          },
+          "latencyUs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookJson": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "venueKind": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "orderId": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "symbol": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "side": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "realizedPnl": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "rejectReason": {
+            "maxLength": 300,
+            "type": "string",
+            "nullable": true
+          },
+          "decisionId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "decision": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/ModelDecision"
+              }
+            ]
+          },
+          "executionTs": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OrderDecisionResponse": {
+        "required": [
+          "id",
+          "instanceId",
+          "packageId",
+          "barTs",
+          "step",
+          "forecast",
+          "targetsJson",
+          "status",
+          "fired",
+          "latencyUs",
+          "inputJson",
+          "bookJson",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "packageId": {
+            "type": "string"
+          },
+          "barTs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "step": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "forecast": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "targetsJson": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "fired": {
+            "type": "boolean"
+          },
+          "latencyUs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inputJson": {
+            "type": "string"
+          },
+          "bookJson": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OrderStatus": {
+        "type": "integer"
+      },
+      "OrderSummaryRow": {
+        "required": [
+          "id",
+          "orderId",
+          "symbol",
+          "side",
+          "quantity",
+          "price",
+          "realizedPnl",
+          "rejectReason",
+          "status",
+          "executionTs",
+          "venueId",
+          "venueKind",
+          "decisionId",
+          "forecast",
+          "decisionStatus",
+          "decisionBarTs",
+          "decisionTargets"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "realizedPnl": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "rejectReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "executionTs": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "venueKind": {
+            "type": "string"
+          },
+          "decisionId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "forecast": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "decisionStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "decisionBarTs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "decisionTargets": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PolicyBody": {
+        "required": [
+          "name",
+          "rules",
+          "activate"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "rules": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "activate": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "PositionActionRequest": {
+        "required": [
+          "kind",
+          "venueId",
+          "id",
+          "volume"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string"
+          },
+          "volume": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
+      },
+      "PositionActionResponse": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ProjectBody": {
+        "required": [
+          "name",
+          "description",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ReplayBody": {
+        "required": [
+          "from_ts",
+          "to_ts"
+        ],
+        "type": "object",
+        "properties": {
+          "from_ts": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "to_ts": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
+      },
+      "RolesBody": {
+        "required": [
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "SetRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StrategyInstance": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ApplicationUser"
+          },
+          "packageId": {
+            "maxLength": 64,
+            "type": "string",
+            "nullable": true
+          },
+          "degradePolicy": {
+            "maxLength": 10,
+            "type": "string",
+            "nullable": true
+          },
+          "executionMode": {
+            "maxLength": 10,
+            "type": "string",
+            "nullable": true
+          },
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instrument": {
+            "$ref": "#/components/schemas/Instrument"
+          },
+          "venueInstances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VenueInstance"
+            }
+          },
+          "venues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "venueFeeds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "legVenues": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "feed": {
+            "type": "string",
+            "nullable": true
+          },
+          "riskMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "riskPercent": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "riskLots": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/StrategyInstanceStatus"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StrategyInstanceStatus": {
+        "type": "integer"
+      },
+      "SubmitBody": {
+        "required": [
+          "packageId",
+          "timeframe",
+          "from_ts",
+          "to_ts",
+          "max_bars",
+          "oos_from_ts",
+          "fill"
+        ],
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "nullable": true
+          },
+          "timeframe": {
+            "type": "string",
+            "nullable": true
+          },
+          "from_ts": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "to_ts": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_bars": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "oos_from_ts": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fill": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TokenRequest": {
+        "required": [
+          "username",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "otp": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UserInformation": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ApplicationUser"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "phone": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "firstName": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "lastName": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VenueEnvelope": {
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "account",
+          "broker",
+          "environment",
+          "error",
+          "pnl",
+          "balance",
+          "margin",
+          "currency",
+          "positions",
+          "orders"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "broker": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "pnl": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "balance": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "margin": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "array"
+          },
+          "orders": {
+            "type": "array"
+          }
+        }
+      },
+      "VenueInstance": {
+        "type": "object",
+        "properties": {
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "venue": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/CTraderVenue"
+              }
+            ]
+          },
+          "alpacaVenueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "alpacaVenue": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/AlpacaVenue"
+              }
+            ]
+          },
+          "metaTraderTerminalId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metaTraderTerminal": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/MetaTraderTerminal"
+              }
+            ]
+          },
+          "fleetVenueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "fleetVenue": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/FleetVenueRegistration"
+              }
+            ]
+          },
+          "strategyInstanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "strategyInstance": {
+            "$ref": "#/components/schemas/StrategyInstance"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/VenuePlatform"
+          },
+          "feedInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "feedInstance": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/FeedInstance"
+              }
+            ]
+          },
+          "feedSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "legs": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/VenueInstanceStatus"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VenueInstanceStatus": {
+        "type": "integer"
+      },
+      "VenuePlatform": {
+        "type": "integer"
+      },
+      "VenuesResponse": {
+        "required": [
+          "venues"
+        ],
+        "type": "object",
+        "properties": {
+          "venues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VenueEnvelope"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AlpacaVenues"
+    },
+    {
+      "name": "CTraderOAuth"
+    },
+    {
+      "name": "CTraderVenues"
+    },
+    {
+      "name": "DatabentoVenues"
+    },
+    {
+      "name": "EngineState"
+    },
+    {
+      "name": "Fleet"
+    },
+    {
+      "name": "FleetVenues"
+    },
+    {
+      "name": "Historical"
+    },
+    {
+      "name": "InstrumentIcons"
+    },
+    {
+      "name": "Instruments"
+    },
+    {
+      "name": "MetaTraderAccounts"
+    },
+    {
+      "name": "ModelReplay"
+    },
+    {
+      "name": "Orders"
+    },
+    {
+      "name": "PackageBacktests"
+    },
+    {
+      "name": "Packages"
+    },
+    {
+      "name": "Positions"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "ProjectDocuments"
+    },
+    {
+      "name": "ProjectRiskPolicies"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "ProjectStrategies"
+    },
+    {
+      "name": "Promotions"
+    },
+    {
+      "name": "PublicMedia"
+    },
+    {
+      "name": "StrategyInstances"
+    },
+    {
+      "name": "StrategyNames"
+    },
+    {
+      "name": "Token"
+    },
+    {
+      "name": "TradingMode"
+    },
+    {
+      "name": "Users"
+    },
+    {
+      "name": "VenueCatalog"
+    },
+    {
+      "name": "VenuesSummary"
+    }
+  ]
+}

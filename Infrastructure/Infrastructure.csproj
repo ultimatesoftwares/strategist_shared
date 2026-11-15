@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared infrastructure kernel every host composes:
+       - Strategist.Infrastructure.Storage: the PostgreSQL context factory
+         (RepositoryHost) and QuestDB store registration.
+       - Strategist.Infrastructure.Messaging: StrategistBus (MassTransit
+         over RabbitMQ) — the platform's single bus wiring.
+       - Strategist.Infrastructure.TimeSeries: the QuestDB historical
+         market-data plane (ILP writes, /exec SQL reads, PGWire reads and
+         the fault-tolerant chunked venue fetch jobs). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Strategist.Infrastructure</AssemblyName>
+    <RootNamespace>Strategist.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same implicit usings the files compiled with before the merge. -->
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- AppDbContext (Server.Data) that RepositoryHost registers. -->
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.12" />
+    <!-- ILP writes via the official client; reads over PGWire (port 8812)
+         via Npgsql. Consumers see neither package — both are wrapped behind
+         the adapter surface. -->
+    <PackageReference Include="net-questdb-client" Version="4.0.0" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The QuestDB PGWire reader's missing-table convention is pinned by
+         the Backtest slave's test project (its former home). -->
+    <InternalsVisibleTo Include="Backtest.Tests" />
+    <!-- StrategistBus wiring is pinned by the infrastructure test project. -->
+    <InternalsVisibleTo Include="Infrastructure.Tests" />
+  </ItemGroup>
+
+</Project>

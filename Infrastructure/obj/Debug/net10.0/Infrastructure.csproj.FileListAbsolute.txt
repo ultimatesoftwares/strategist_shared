@@ -1,0 +1,16 @@
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/bin/Debug/net10.0/Strategist.Infrastructure.deps.json
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/bin/Debug/net10.0/Strategist.Infrastructure.dll
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/bin/Debug/net10.0/Strategist.Infrastructure.pdb
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/bin/Debug/net10.0/Repository.Persistence.dll
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/bin/Debug/net10.0/Repository.Persistence.pdb
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.csproj.AssemblyReference.cache
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.AssemblyInfoInputs.cache
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.AssemblyInfo.cs
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.csproj.CoreCompileInputs.cache
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastructure.sourcelink.json
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Infrastr.15EFFBFE.Up2Date
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Strategist.Infrastructure.dll
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/refint/Strategist.Infrastructure.dll
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/Strategist.Infrastructure.pdb
+/home/cowanweks/Projects/strategist/Shared/Infrastructure/obj/Debug/net10.0/ref/Strategist.Infrastructure.dll
