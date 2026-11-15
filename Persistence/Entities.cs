@@ -1116,4 +1116,54 @@ namespace Server.Models
         /// <summary>Last catalog sync that saw this symbol.</summary>
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// fleetd's terminal registry (table <c>fleet_terminals</c>): one row per
+    /// MetaTrader terminal managed by a fleetd host — identity plus how to
+    /// launch its process (wine + terminal64.exe in a dedicated home copied
+    /// from the platform template). Replaces fleetd's local
+    /// <c>terminals.json</c> when a database is configured. Rows are scoped by
+    /// <see cref="HostId"/> so several fleetd VMs can share the schema.
+    /// </summary>
+    public class FleetTerminal
+    {
+        /// <summary>Stable terminal_id (GUID hex); the EA presents the same id
+        /// when it dials the engine's TerminalService.</summary>
+        [MaxLength(64)]
+        public string Id { get; set; } = "";
+
+        /// <summary>The fleetd host owning this terminal (Fleet:HostId,
+        /// default machine name). Each host loads only its own rows.</summary>
+        [MaxLength(128)]
+        public string HostId { get; set; } = "";
+
+        [MaxLength(128)] public string Name { get; set; } = "";
+
+        /// <summary>"mt4" | "mt5"; selects the provisioning template.</summary>
+        [MaxLength(8)]
+        public string Platform { get; set; } = "mt5";
+
+        /// <summary>Provisioned terminal home on the host (empty for
+        /// registration-only terminals that run elsewhere).</summary>
+        [MaxLength(512)]
+        public string HomeDir { get; set; } = "";
+
+        /// <summary>Executable to launch, e.g. "/usr/bin/wine". Empty = unmanaged.</summary>
+        [MaxLength(512)]
+        public string Command { get; set; } = "";
+
+        /// <summary>Launch arguments (JSON array of strings, jsonb).</summary>
+        public string ArgsJson { get; set; } = "[]";
+
+        [MaxLength(512)] public string WorkingDir { get; set; } = "";
+
+        /// <summary>Extra process environment (JSON object, jsonb).</summary>
+        public string EnvironmentJson { get; set; } = "{}";
+
+        /// <summary>Start the process automatically when fleetd boots.</summary>
+        public bool AutoStart { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
 }

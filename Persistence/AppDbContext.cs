@@ -56,6 +56,7 @@ namespace Server.Data
         public DbSet<FleetApiKey> FleetApiKeys => Set<FleetApiKey>();
         public DbSet<FleetInstrumentMapping> FleetInstrumentMappings => Set<FleetInstrumentMapping>();
         public DbSet<FleetVenueInstrument> FleetVenueInstruments => Set<FleetVenueInstrument>();
+        public DbSet<FleetTerminal> FleetTerminals => Set<FleetTerminal>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -311,6 +312,16 @@ namespace Server.Data
                 e.HasOne(i => i.Venue).WithMany()
                     .HasForeignKey(i => i.VenueId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // fleetd's terminal registry: each fleetd host loads only its own
+            // rows (HostId), so several fleet VMs can share the schema.
+            builder.Entity<FleetTerminal>(e =>
+            {
+                e.ToTable("fleet_terminals");
+                e.HasIndex(t => t.HostId);
+                e.Property(t => t.ArgsJson).HasColumnType("jsonb");
+                e.Property(t => t.EnvironmentJson).HasColumnType("jsonb");
             });
 
             // Store enums as strings for readability.
