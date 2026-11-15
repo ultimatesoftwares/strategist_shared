@@ -4,8 +4,8 @@ namespace Strategist.Infrastructure.Configuration
     /// <summary>
     /// Minimal dotenv loader: hosts call <see cref="Load"/> first thing in Main so
     /// a developer's `.env` file (repo root, gitignored) feeds the same
-    /// configuration paths as real environment variables (RABBITMQ_URL, db,
-    /// QUESTDB_URL, Server__*, …). Variables already set in the process
+    /// configuration paths as real environment variables (db, QUESTDB_URL,
+    /// Server__*, …). Variables already set in the process
     /// environment always win — the file never overrides them — so compose,
     /// systemd and CI env blocks behave exactly as before.
     ///

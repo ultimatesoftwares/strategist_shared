@@ -6,8 +6,8 @@ namespace Strategist.Contracts.V1;
 // control API with HTTP-shaped commands sent down the member's attached
 // FleetControl stream (the member reverse-dials the server's gRPC listener;
 // see shared/Protos/fleet_control.proto). Data planes (quotes, venue
-// snapshots, engine state) ride RabbitMQ — nothing here carries market
-// data. Property names and casing are the wire contract.
+// snapshots, engine state) ride gRPC streams too — nothing here carries
+// market data. Property names and casing are the wire contract.
 
 /// <summary>POST {controlUrl}/api/v1/engine/control — the engine control
 /// relay (subjects: engine.state.snapshot, engine.cmd.instance.start/stop,

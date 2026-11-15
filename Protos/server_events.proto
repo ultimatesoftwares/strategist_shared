@@ -1,8 +1,8 @@
 // Server → GUI push feeds for the Strategist desktop client (replaces
 // SSE/polling): engine state (snapshot on connect, then live updates as the
 // EngineStateBroker receives them from the engine's gRPC state stream),
-// live quotes (the fleet hub's RabbitMQ quote plane fanned out per watched
-// instrument), and live order books (the hub's depth plane, same pattern).
+// live quotes (the fleet quote plane fanned out per watched instrument),
+// and live order books (the hub's depth plane, same pattern).
 syntax = "proto3";
 
 package serverevents;

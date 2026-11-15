@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 namespace Strategist.Contracts.V1;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The master ↔ slave job plane (see Strategist.Contracts.Bus.BacktestQueue).
+// The master ↔ slave job plane (gRPC since the RabbitMQ queues were
+// retired; see Strategist.Contracts.Bus.BacktestQueue).
 // Property names, casing and declaration order are the wire contract
 // (reorg rule R1). Legacy snake_case names are deliberate.
 // The legacy IR replay contracts (kind="backtest" jobs and their

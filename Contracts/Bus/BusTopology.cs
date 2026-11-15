@@ -1,11 +1,15 @@
 namespace Strategist.Contracts.Bus;
 
 /// <summary>
-/// The engine's state plane: latest-per-subject GUI state published on the bus
-/// as <see cref="V1.EngineStateChanged"/> (subject + JSON payload; a null/empty
-/// payload tombstones the subject). Payload shapes live in
-/// <c>Strategist.Contracts.V1</c> and are frozen by the golden-payload
-/// characterization tests.
+/// The engine's state plane: latest-per-subject GUI state, carried as
+/// <see cref="V1.EngineStateChanged"/> frames (subject + JSON payload; a
+/// null/empty payload tombstones the subject) over gRPC — the engine's
+/// state stream up to the server, fanned out to desktop clients by the
+/// server's <c>EngineStateFeed</c> (shared/Protos/server_events.proto).
+/// Payload shapes live in <c>Strategist.Contracts.V1</c> and are frozen by
+/// the golden-payload characterization tests. (The former MassTransit/
+/// RabbitMQ transport was retired: these subjects are the surviving,
+/// transport-neutral vocabulary.)
 /// </summary>
 public static class EngineStateBus
 {
@@ -26,7 +30,7 @@ public static class EngineStateBus
 
     /// <summary>engine.state.health — the engine's .NET health report
     /// (venue connectivity + quote staleness), mirrored to the server by
-    /// the bus state publisher like every other engine.state.* subject.</summary>
+    /// the state stream like every other engine.state.* subject.</summary>
     public const string EngineHealthSubject = "engine.state.health";
 
     /// <summary>health.strategy.{instanceId} — <see cref="V1.StrategyHealthState"/>.</summary>
@@ -35,42 +39,15 @@ public static class EngineStateBus
 }
 
 /// <summary>
-/// The bus contract between the server (master) and the Backtest slave.
-/// The server sends job requests to the durable <see cref="JobsQueue"/>
-/// (<see cref="V1.PackageBacktestJobMessage"/>)
-/// and publishes cancellations (<see cref="V1.BacktestCancelMessage"/>); the
-/// slave publishes job progress and terminal states
-/// (<see cref="V1.PackageBacktestStateMessage"/>) plus a periodic
-/// <see cref="V1.WorkerHeartbeat"/> carrying the ids it is currently running,
-/// which the server's watchdog consumes to update rows and detect lost jobs.
-/// Market-data provisioning left this queue for <see cref="FleetDataQueue"/>:
-/// venue history lives on the fleet hub with the broker SDKs. Strategy
-/// packages are built desktop-side (uv) and verified by the server on upload
-/// — no build jobs ride this queue anymore.
+/// The master ↔ Backtest-slave job plane. The queue transport (RabbitMQ)
+/// was retired; job dispatch/progress ride gRPC. The wire shapes
+/// (<see cref="V1.PackageBacktestJobMessage"/>,
+/// <see cref="V1.PackageBacktestStateMessage"/>, <see cref="V1.WorkerHeartbeat"/>)
+/// are unchanged.
 /// </summary>
 public static class BacktestQueue
 {
-    /// <summary>Durable work queue the slave consumes.</summary>
-    public const string JobsQueue = "backtest.jobs";
-
     /// <summary>Heartbeat cadence; the server treats a running row whose id
     /// is absent from fresh heartbeats as lost on the worker.</summary>
     public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(5);
-}
-
-/// <summary>
-/// The bus contract between the server (master) and the FLEET HUB's
-/// market-data provisioning worker. The server sends
-/// <see cref="V1.ProvisionJobMessage"/> to the durable <see cref="JobsQueue"/>
-/// and publishes cancellations (<see cref="V1.BacktestCancelMessage"/>, shared
-/// with the backtest plane); the hub fetches the range from the venue
-/// (chunked, fault-tolerant, QuestDB dedup upserts) and publishes
-/// <see cref="V1.ProvisionStateMessage"/> progress in the exact JSON shape the
-/// GUI's provision-jobs list renders. No heartbeat: provision rows live in the
-/// server's in-memory mirror, never in watchdog-swept tables.
-/// </summary>
-public static class FleetDataQueue
-{
-    /// <summary>Durable work queue the fleet hub consumes.</summary>
-    public const string JobsQueue = "fleet.data.jobs";
 }

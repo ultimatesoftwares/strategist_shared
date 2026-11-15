@@ -137,7 +137,7 @@ namespace Server.Models
 
     /// <summary>Registration of a venue hosted by the Fleet venue host
     /// (src/Fleet hub): the engine executes through the hub's REST surface and
-    /// consumes its RabbitMQ quote plane instead of a native venue adapter.</summary>
+    /// consumes its gRPC quote feed instead of a native venue adapter.</summary>
     public class FleetVenueRegistration : BaseEntity
     {
         // Optional owner; rows stored without one stay global.

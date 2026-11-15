@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Strategist.FleetMember</RootNamespace>
     <AssemblyName>Strategist.FleetMember</AssemblyName>
-    <Description>The member side of the fleet control plane: FleetMemberOptions (identity, capabilities, the advertised control URL and the server's base URL) and FleetControlDialerService (the reverse-dial gRPC command stream — the member dials the server, beats its liveness/load/RTT, and answers HTTP-shaped commands against its own local control listener, so a fleet host needs zero inbound ports). Data planes ride RabbitMQ.</Description>
+    <Description>The member side of the fleet control plane: FleetMemberOptions (identity, capabilities, the advertised control URL and the server's base URL) and FleetControlDialerService (the reverse-dial gRPC command stream — the member dials the server, beats its liveness/load/RTT, and answers HTTP-shaped commands against its own local control listener, so a fleet host needs zero inbound ports). Data planes ride gRPC streams.</Description>
   </PropertyGroup>
 
   <ItemGroup>

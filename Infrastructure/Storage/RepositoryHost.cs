@@ -14,8 +14,8 @@ namespace Strategist.Infrastructure.Storage
     /// market-data store (<see cref="QuestDb"/>). The hosting service calls
     /// <see cref="AddRepository"/> while building its host and resolves
     /// IDbContextFactory&lt;AppDbContext&gt; or <see cref="QuestDb"/> wherever
-    /// it needs storage. Messaging rides the MassTransit bus
-    /// (<see cref="Strategist.Infrastructure.Messaging.StrategistBus"/>) since hexagonal P2.
+    /// it needs storage. Messaging/push feeds ride gRPC (shared/Protos)
+    /// since the RabbitMQ bus was retired.
     /// </summary>
     public static class RepositoryHost
     {

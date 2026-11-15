@@ -26,8 +26,9 @@ public sealed partial class QuestDb
     /// Fetches bars from a venue ("ctrader", "metatrader" or "alpaca")
     /// into the store as a fault-tolerant job:
     /// the range is split into month microtasks, each retried independently
-    /// and throttled between calls (rate limits), with state published to the
-    /// bus. A failed chunk is skipped and reported in the result, never fatal.
+    /// and throttled between calls (rate limits), with state raised via
+    /// the in-process JobStateChanged event. A failed chunk is skipped and
+    /// reported in the result, never fatal.
     /// </summary>
     public async Task<FetchJobResult> FetchBarsAsync(
         string venue, string symbol, string timeframe, DateRange range,

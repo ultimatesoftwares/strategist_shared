@@ -4,8 +4,8 @@ using Strategist.TimeSeries;
 
 namespace Strategist.Infrastructure.TimeSeries;
 
-/// <summary>Published state of one fetch job: emitted to RabbitMQ after every
-/// microtask so GUIs can live-track long provisioning runs.</summary>
+/// <summary>Published state of one fetch job: raised in-process after every
+/// microtask so hosts can live-track long provisioning runs.</summary>
 public sealed record FetchJobState(
     string JobId, string Kind, string Venue, string Symbol, string? Timeframe,
     DateTime From, DateTime To,
@@ -105,7 +105,7 @@ public sealed partial class QuestDb
 
     /// <summary>Raises the in-process job-state event (the old best-effort
     /// RabbitMQ mirror on "historical.jobs" had no consumers and was retired
-    /// with the raw-AMQP bus at hexagonal P2).</summary>
+    /// with the bus).</summary>
     private Task PublishJobStateAsync(FetchJobState state, CancellationToken ct)
     {
         JobStateChanged?.Invoke(state);

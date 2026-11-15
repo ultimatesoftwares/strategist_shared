@@ -120,8 +120,9 @@ public sealed record StrategyHealthState
     [JsonPropertyName("ring_high_water")] public required long RingHighWater { get; init; }
 }
 
-/// <summary>Bus frame for one engine-state subject (the "engine.state"
-/// plane, carried by MassTransit since P2): latest-per-subject GUI state.
+/// <summary>Frame for one engine-state subject (the "engine.state" plane,
+/// carried over the engine→server gRPC state stream and fanned out to
+/// desktop clients by EngineStateFeed): latest-per-subject GUI state.
 /// <see cref="Json"/> holds the subject's payload (one of the records in
 /// this file, serialized); null tombstones the subject.</summary>
 public sealed record EngineStateChanged
