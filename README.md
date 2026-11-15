@@ -14,6 +14,7 @@ git submodule add https://github.com/ultimatesoftwares/strategist_shared.git sha
 
 | Directory | Contents |
 |---|---|
+| `Auth/` | `Strategist.Auth` — the JWT auth contract between the identity server (issuer) and resource services (validators): permission catalog, HS256 key-derivation convention (`SHA256(Jwt:SigningKey)`), and DI extensions (`AddStrategistJwtValidation`, `AddPermissionPolicies`). |
 | [`protos/`](protos/README.md) | gRPC contract (`fleet.v1`): `TerminalService`, served by your engine, dialed by the EA connectors. Include root is `shared/protos` (imports are `fleet/v1/...`). |
 | `database/` | Database schema/migrations shared across Fleet services. |
 | `domain/` | Shared domain model definitions. |

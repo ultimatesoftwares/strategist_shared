@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Strategist.Auth</AssemblyName>
+    <RootNamespace>Strategist.Auth</RootNamespace>
+    <Description>The Strategist JWT auth contract shared between the identity server (token issuer) and resource services (validators): the permission catalog, the signing-key derivation convention, and DI extensions that give every service identical bearer-token validation and permission policies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>
