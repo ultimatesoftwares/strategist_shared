@@ -1,2 +1,0 @@
-obj/Debug/net10.0/AgentRegistry.cs \
-obj/Debug/net10.0/AgentRegistryGrpc.cs: ../Protos/agent_registry.proto

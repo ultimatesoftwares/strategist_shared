@@ -1,2 +1,0 @@
-obj/Debug/net10.0/FleetControl.cs \
-obj/Debug/net10.0/FleetControlGrpc.cs: ../Protos/fleet_control.proto
