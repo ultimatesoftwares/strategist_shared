@@ -1,7 +1,7 @@
 <Solution>
   <Project Path="Contracts/Contracts.csproj" />
   <Project Path="Domain/Domain.csproj" />
-  <Project Path="FleetMember/FleetMember.csproj" />
+
   <Project Path="Infrastructure/Infrastructure.csproj" />
   <Project Path="Persistence/Persistence.csproj" />
 </Solution>
