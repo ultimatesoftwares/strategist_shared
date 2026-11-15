@@ -8,3 +8,35 @@ Regenerated on every build of the owning project; **do not edit by hand**.
 |---|---|---|
 | `Server.json` | Strategist Server API (GUI REST surface) | Server build |
 | `fleet-v1.json` | Fleet Control Plane (fleetd `/api/v1`: terminal lifecycle + provisioning, templates, VNC) | `dotnet build Fleet.csproj` in the [Fleet](https://github.com/ultimatesoftwares/Fleet) repo (build-time OpenAPI generation) |
+
+`fleet-v1.json` is pinned to **OpenAPI 3.0** and every operation carries a
+snake_case `operationId` (`list_terminals`, `create_terminal`,
+`provision_terminal`, `start_terminal`, …) with fully typed request/response
+schemas, so [progenitor](https://github.com/oxidecomputer/progenitor) can
+generate a strongly-typed Rust client from it directly.
+
+## Rust (progenitor) consumption
+
+```toml
+[dependencies]
+progenitor = "0.16"
+progenitor-client = "0.16"   # runtime of the generated code
+regress = "0.10"             # regex'd path params (template platform, vnc verb)
+reqwest = { version = "0.13", features = ["json", "stream"] }  # match progenitor-client's reqwest major
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures = "0.3"
+```
+
+```rust
+// spec path is relative to the crate root; vendor the submodule or copy the file
+progenitor::generate_api!(spec = "fleet-v1.json", interface = Builder);
+
+// let client = Client::new_with_client(base_url, reqwest_client_with_x_api_key_header);
+// client.create_terminal().body(...).send().await?;   // 202: provisioning started
+// client.get_terminal().id(id).send().await?;         // poll process.state
+```
+
+Auth: every operation requires the `X-Api-Key` header (or
+`Authorization: Bearer`); inject it via a `reqwest` default header, e.g.
+`Client::new_with_client(url, reqwest::ClientBuilder::new().default_headers(h).build()?)`.
