@@ -1,4 +1,4 @@
-# fleet_shared
+# strategist_shared
 
 Shared artifacts of **Fleet** — the MT4/MT5 terminal fleet system
 ([ultimatesoftwares/Fleet](https://github.com/ultimatesoftwares/Fleet)).
@@ -7,7 +7,7 @@ component consumes; vendor it as a git submodule (conventionally mounted at
 `shared/`) and generate/import from there.
 
 ```sh
-git submodule add https://github.com/ultimatesoftwares/fleet_shared.git shared
+git submodule add https://github.com/ultimatesoftwares/strategist_shared.git shared
 ```
 
 ## Layout

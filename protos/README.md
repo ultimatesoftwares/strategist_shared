@@ -2,8 +2,8 @@
 
 gRPC contract of **Fleet** — the MT4/MT5 terminal fleet system
 ([ultimatesoftwares/Fleet](https://github.com/ultimatesoftwares/Fleet)).
-Part of the `fleet_shared` repo — the single source of truth; consumers
-vendor it (as the `fleet_shared` git submodule) and generate code locally.
+Part of the `strategist_shared` repo — the single source of truth; consumers
+vendor it (as the `strategist_shared` git submodule) and generate code locally.
 
 ## Files
 
@@ -34,10 +34,10 @@ import "fleet/v1/common.proto";
 ```
 
 so the **include root is this `protos/` directory** (it contains `fleet/`).
-With the `fleet_shared` submodule mounted at `shared/`:
+With the `strategist_shared` submodule mounted at `shared/`:
 
 ```sh
-git submodule add https://github.com/ultimatesoftwares/fleet_shared.git shared
+git submodule add https://github.com/ultimatesoftwares/strategist_shared.git shared
 
 protoc -I shared/protos \
   shared/protos/fleet/v1/common.proto \
