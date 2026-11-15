@@ -1,8 +1,9 @@
-// Server → GUI push feeds for the Strategist desktop client (replaces
-// SSE/polling): engine state (snapshot on connect, then live updates as the
-// EngineStateBroker receives them from the engine's gRPC state stream),
-// live quotes (the fleet quote plane fanned out per watched instrument),
-// and live order books (the hub's depth plane, same pattern).
+// Bot → GUI push feeds (shared/Protos/bot): engine state (snapshot on
+// connect, then live updates as the EngineStateBroker receives them from the
+// engine's gRPC state stream), live quotes (the fleet quote plane fanned out
+// per watched instrument), and live order books (the hub's depth plane, same
+// pattern). The BacktestEngine's feed is a separate contract:
+// shared/Protos/backtest/v1/backtest_events.proto.
 syntax = "proto3";
 
 package serverevents;

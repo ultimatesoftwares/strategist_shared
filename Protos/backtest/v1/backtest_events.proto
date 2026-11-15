@@ -1,0 +1,28 @@
+// BacktestEngine → GUI push feed (shared/Protos/backtest): job lifecycle +
+// progress (backtest.job.{id}) and live in-run telemetry (backtest.run.{id})
+// as subject-addressed JSON events — same replay-then-live semantics as the
+// bot's serverevents.EngineStateFeed (shared/Protos/bot/v1/bot_events.proto),
+// but a separate contract so the backtest API can evolve independently.
+syntax = "proto3";
+
+package backtestevents;
+
+option csharp_namespace = "Strategist.BacktestEvents";
+
+service BacktestFeed {
+  // Replays the latest state per subject, then streams live updates.
+  rpc Subscribe (BacktestSubscribeRequest) returns (stream BacktestEventUpdate);
+}
+
+message BacktestSubscribeRequest {
+  // Optional subject prefix filter (e.g. "backtest.job."); empty = all.
+  string prefix = 1;
+}
+
+message BacktestEventUpdate {
+  string subject = 1;
+  // Payload JSON — camelCase, same shapes as the REST job views.
+  string json = 2;
+  // Server receive time (unix milliseconds) — drives staleness checks.
+  int64 received_at_ms = 3;
+}
