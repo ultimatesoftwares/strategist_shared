@@ -1,0 +1,485 @@
+{
+  "openapi": "3.2.0",
+  "info": {
+    "title": "Fleet Control Plane",
+    "description": "REST API of fleetd: manage MetaTrader terminal instances (provision, start, stop, delete), terminal templates and the VNC remote-desktop display. Terminals connect directly to the configured engine (Fleet:EngineAddress).",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/v1/terminals": {
+      "get": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "List all terminals",
+        "description": "Managed terminals; each entry merges config and process state.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Create a terminal",
+        "description": "Registers the terminal and (unless provision=false) starts provisioning it in the background by copying the platform template (building the template first if needed), returning 202 Accepted. Poll GET /terminals/{id} until process.state leaves Provisioning. Default launch command is wine <home>/terminal(64).exe /portable. With provision=false the terminal is registration-only and 201 is returned.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTerminalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}": {
+      "get": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Get one terminal",
+        "description": "process.state is Provisioning/ProvisionFailed while the home directory extraction runs or after it failed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Update a terminal's config",
+        "description": "Platform and home directory are immutable; changes apply on next start.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTerminalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Delete a terminal",
+        "description": "Removes the config and the provisioned home directory. Refuses while the process runs or provisioning is active unless ?force=true, which stops/cancels first.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}/provision": {
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "(Re-)provision the home directory",
+        "description": "Retries provisioning after a ProvisionFailed, or provisions a terminal created with provision=false. Returns 202 Accepted; poll GET /terminals/{id}.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}/start": {
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Start the terminal process",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}/stop": {
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Stop the terminal process",
+        "description": "SIGTERM, then a process-tree kill after the grace period.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terminals/{id}/restart": {
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Restart the terminal process",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Terminal template status",
+        "description": "One entry per platform: whether a template is built, an active build, and the last build error.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/{platform}": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Build a terminal template",
+        "description": "Downloads the official MetaQuotes installer, silent-installs it under a scratch wineprefix, and publishes the tree to DataDir/templates/{platform} with the connector overlay applied. Returns 202; poll GET /templates. Terminal creation also triggers this automatically when no template exists.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^(mt4|mt5)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Delete a terminal template",
+        "description": "Removes the built template; existing terminals are unaffected. The next build downloads a fresh installer.",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^(mt4|mt5)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/vnc/status": {
+      "get": {
+        "tags": [
+          "Vnc"
+        ],
+        "summary": "VNC unit status",
+        "description": "systemctl is-active for the VNC unit (default: fleet-vnc) plus the current listen state. State is \"unknown\" when systemctl is unavailable.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/vnc/{verb}": {
+      "post": {
+        "tags": [
+          "Vnc"
+        ],
+        "summary": "Start/stop/restart the VNC display",
+        "description": "Runs systemctl <verb> on the VNC unit (Fleet:VncUnit, default fleet-vnc: a persistent Xvnc that managed terminals render into via injected DISPLAY) and returns the listen endpoint (display, port, connectable host IPs) plus the credentials: Fleet:VncPassword when set, otherwise a password generated per start/restart and written to the Xvnc auth file (Fleet:VncPasswdFile under DataDir - no privileged helper needed). fleetd's user needs a polkit rule or sudo wrapper (Fleet:SystemctlBinary) for the systemctl call to succeed.",
+        "parameters": [
+          {
+            "name": "verb",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^(start|stop|restart)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateTerminalRequest": {
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "provision",
+          "command",
+          "args",
+          "workingDir",
+          "environment",
+          "autoStart"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platform": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "provision": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "command": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "args": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "workingDir": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "environment": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "autoStart": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "UpdateTerminalRequest": {
+        "required": [
+          "name",
+          "command",
+          "args",
+          "workingDir",
+          "environment",
+          "autoStart"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "command": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "args": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "workingDir": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "environment": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "autoStart": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "description": "Admin API key (Fleet:ApiKey setting or FLEET_API_KEY environment variable).",
+        "name": "X-Api-Key",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKey": [ ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "Templates"
+    },
+    {
+      "name": "Terminals"
+    },
+    {
+      "name": "Vnc"
+    }
+  ]
+}
