@@ -33,11 +33,15 @@ futures = "0.3"
 // spec path is relative to the crate root; vendor the submodule or copy the file
 progenitor::generate_api!(spec = "fleet-v1.json", interface = Builder);
 
-// let client = Client::new_with_client(base_url, reqwest_client_with_x_api_key_header);
+// let client = Client::new_with_client(base_url, reqwest_client_with_bearer_header);
 // client.create_terminal().body(...).send().await?;   // 202: provisioning started
 // client.get_terminal().id(id).send().await?;         // poll process.state
 ```
 
-Auth: every operation requires the `X-Api-Key` header (or
-`Authorization: Bearer`); inject it via a `reqwest` default header, e.g.
-`Client::new_with_client(url, reqwest::ClientBuilder::new().default_headers(h).build()?)`.
+Auth: every operation requires `Authorization: Bearer <access token>`.
+fleetd only **validates** tokens; it does not issue them. Obtain one from
+the Strategist server (which signs them with the fleet secret shared with
+fleetd, `FLEET_API_KEY`), then inject it via a `reqwest` default header,
+e.g. `Client::new_with_client(url,
+reqwest::ClientBuilder::new().default_headers(h).build()?)`. Tokens are
+short-lived - on a 401, fetch a fresh token and retry.

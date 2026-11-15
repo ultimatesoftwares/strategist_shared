@@ -1108,17 +1108,16 @@
       }
     },
     "securitySchemes": {
-      "ApiKey": {
-        "type": "apiKey",
-        "description": "Admin API key (Fleet:ApiKey setting or FLEET_API_KEY environment variable).",
-        "name": "X-Api-Key",
-        "in": "header"
+      "AccessToken": {
+        "type": "http",
+        "description": "Fleet access token issued by the Strategist server (signed with the shared Fleet:ApiKey / FLEET_API_KEY secret).",
+        "scheme": "bearer"
       }
     }
   },
   "security": [
     {
-      "ApiKey": [ ]
+      "AccessToken": [ ]
     }
   ],
   "tags": [
