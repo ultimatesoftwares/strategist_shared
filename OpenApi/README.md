@@ -10,7 +10,7 @@ without touching anyone else's. **Do not edit by hand.**
 | `Server/server-v1.json` | Strategist Server API (auth/identity: token, register, profile, users, roles + the strategy-project pipeline) | `dotnet build Server.csproj` in the [strategist_server](https://github.com/ultimatesoftwares/strategist_server) repo (build-time OpenAPI generation) |
 | `Fleet/fleet-v1.json` | Fleet Control Plane (fleetd `/api/v1`: terminal lifecycle + provisioning, templates, VNC) | `dotnet build Fleet.csproj` in the [Fleet](https://github.com/ultimatesoftwares/Fleet) repo (build-time OpenAPI generation) |
 | `Bot/bot-v1.json` | strategist_bot control API (:5080 — venues, accounts/positions/orders, risk, instrument registry + catalogs, history, MT terminals) | `dotnet build src/Bot` in the [strategist_bot](https://github.com/ultimatesoftwares/strategist_bot) repo (build-time OpenAPI generation) |
-| `Backtest/backtest-v1.json` | strategist_bot backtest API (:5090 — backtest jobs: single runs, Monte Carlo, walk-forward, sweeps) | `dotnet build src/BacktestEngine` in the strategist_bot repo (build-time OpenAPI generation) |
+| `Research/research-v1.json` | strategist_bot research API (:5090 — backtest jobs: single runs, Monte Carlo, walk-forward, sweeps) | `dotnet build src/ResearchEngine` in the strategist_bot repo (build-time OpenAPI generation) |
 
 `Fleet/fleet-v1.json` is pinned to **OpenAPI 3.0** and every operation
 carries a snake_case `operationId` (`list_terminals`, `create_terminal`,
