@@ -1110,7 +1110,7 @@
     "securitySchemes": {
       "AccessToken": {
         "type": "http",
-        "description": "Fleet access token issued by the Strategist server (signed with the shared Fleet:ApiKey / FLEET_API_KEY secret).",
+        "description": "Fleet access token issued by the Strategist server (POST /api/v1/fleet/token there; short-lived ES256 JWT with audience \"fleetd\" - on 401, fetch a fresh one and retry).",
         "scheme": "bearer"
       }
     }
