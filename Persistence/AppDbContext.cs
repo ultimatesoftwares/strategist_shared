@@ -67,9 +67,8 @@ namespace Server.Data
             builder.Entity<Order>(e =>
             {
                 e.ToTable("orders");
-                // Quant-path fills link to the model decision that caused
-                // them; the decision-log retention purge never deletes linked
-                // rows, so SetNull only fires on manual decision deletes.
+                // Strategy-path orders link to the model decision that caused
+                // them; SetNull keeps the order row if a decision is deleted.
                 e.HasIndex(x => x.DecisionId);
                 e.HasOne(x => x.Decision).WithMany()
                     .HasForeignKey(x => x.DecisionId)
@@ -111,8 +110,8 @@ namespace Server.Data
                 e.Property(x => x.PromotionHistory).HasColumnType("jsonb");
             });
 
-            // Quant-runtime per-bar decision log (quant platform M6, D6):
-            // engine-written fail-open, server-read for replay parity.
+            // Strategy decision journal: bot-written (OrderLog) for
+            // evaluations that emitted orders; orders.DecisionId links back.
             builder.Entity<ModelDecision>(e => e.ToTable("model_decisions"));
 
             // Quant-package backtest results (quant platform M4, D9) — keyed by

@@ -23,9 +23,8 @@ usage is a complete census.
 
 - The 11 tables of the two dead clusters (fleet hub registry + engine
   orchestration) were dropped on 2026-11-16 (migrations below).
-- Of the 7 tables that were kept by decision, **6 were hooked up on
-  2026-11-16** (writers/endpoints listed under "Live tables"); only
-  `model_decisions` remains unused (deferred, see below).
+- All 7 tables that were kept by decision are now hooked up (6 on
+  2026-11-16, `model_decisions` later the same day — see "Live tables").
 - QuestDB `bars` and `ticks` are both live.
 - The ASP.NET Identity side tables are framework-managed; keep them.
 
@@ -49,6 +48,7 @@ usage is a complete census.
 | `strategy_packages` | `strategist_server` `Controllers/PackagesController.cs` (hooked 2026-11-16; content-addressed `.sgpkg` registry under `Server:PackagesDir`, promotion ladder) |
 | `backtest_results` | `strategist_bot` `src/BacktestEngine/Api/BacktestResultMirror.cs` (hooked 2026-11-16; fail-open mirror of the job journal, on when "database" is enabled) |
 | `orders` | `strategist_bot` `src/Bot/Hosting/OrderLog.cs` (hooked 2026-11-16; fills/cancels/rejects from fleet execution reports, bounded-channel writer) |
+| `model_decisions` | `strategist_bot` `src/Bot/Hosting/OrderLog.cs` `RecordDecision` (hooked 2026-11-16; reshaped the same day — see notes). Journal of strategy evaluations that emitted ≥ 1 order, from the Rust engine's `last_decision` snapshot (FFI ABI 6). `orders.DecisionId` is stamped by the drain. |
 | `provision_jobs` | `strategist_bot` `src/Bot/Hosting/ProvisionJobMirror.cs` (hooked 2026-11-16; mirrors history fetch manifests from `HistoricalDataService.SaveManifest`) |
 | `fleet_terminals` | `strategist_fleet` `Service/DbTerminalConfigStore.cs`, `Program.cs` |
 
@@ -59,20 +59,29 @@ QuestDB: `bars`, `ticks` — written/read by `strategist_bot`
 
 ## Unused tables kept by decision (do NOT drop)
 
-Of the 7 tables kept on 2026-11-16, 6 were hooked the same day (see "Live
-tables" above). One remains unused:
+All 7 tables kept on 2026-11-16 are now hooked (see "Live tables" above);
+none remain unused.
 
-| Table | Entity | Notes |
-|---|---|---|
-| `model_decisions` | `ModelDecision` | **Deferred.** No emitter exists anywhere: the Rust strategy core surfaces only order commands (no decision callback), and the planned `/api/model-replay` endpoint was never built. The `orders.DecisionId` FK stays null until a core decision journal lands. Hook it when the core exposes decisions. |
-
-Notes on the hooked six (realism gaps / limitations):
+Notes on the hooked tables (realism gaps / limitations):
 
 - `orders` rows now carry `RejectReason` (broker refusals via the adapters'
   `IRejectReasonSource` stash; pre-trade gate denials verbatim) and
   `RealizedPnl` (per-session average-cost attribution by `PositionLedger` —
   fills-the-log-saw only, price units × lots, not statement truth).
-  `DecisionId` stays null pending the decision journal.
+  `DecisionId` links to the `model_decisions` row that caused the order;
+  null for manual/external orders and when the decision was evicted from
+  the drain's bounded (venue, order id) map (cap 8192) or dropped by the
+  channel's DropOldest policy.
+- `model_decisions` was reshaped (`ReshapeModelDecisions` migration): the
+  old bar-based quant-runtime columns (InstanceId/PackageId/BarTs/Step/
+  InputJson/TargetsJson/Fired/LatencyUs) are gone; rows are now per
+  order-emitting evaluation — account, venue, symbol, strategy descriptor
+  (e.g. `onnx:models/x.onnx`), forecast (null in warmup/degraded), status
+  (`warmup|active|degraded`), and a top-of-book + position `BookJson`
+  snapshot. Deliberately NOT every evaluation (strategies evaluate per book
+  update; that would be thousands of rows/sec). Forecast is the raw
+  dimensionless signal (for classifiers, the argmax direction), and
+  `BookJson` is top-of-book, not full depth.
 - `backtest_results` rows written by the engine mirror have an empty
   `PackageId` (ad-hoc engine jobs are not package-driven).
 - `strategy_packages` "validated" means structurally validated (readable

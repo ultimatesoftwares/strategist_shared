@@ -99,11 +99,9 @@ namespace Server.Models
         [MaxLength(300)]
         public string? RejectReason { get; set; }
 
-        /// <summary>The model_decisions row whose targets caused this order
-        /// (quant path only); null for python-path, manual and external
-        /// fills. SetNull on decision delete — but the retention purge never
-        /// removes linked decisions, so every trade keeps its causing
-        /// prediction.</summary>
+        /// <summary>The model_decisions row whose signal caused this order
+        /// (strategy path only); null for manual and external fills.
+        /// SetNull on decision delete so the order row survives.</summary>
         public long? DecisionId { get; set; }
         public ModelDecision? Decision { get; set; }
 
@@ -189,53 +187,48 @@ namespace Server.Models
     }
 
 
-    /// <summary>One quant-runtime step decision (table <c>model_decisions</c>,
-    /// quant platform M6 / G1 report D6). Written fail-open by the engine on
-    /// every closed bar of a package instance; replayed by the Server's
-    /// <c>/api/model-replay</c> parity check. Purged by the engine after
-    /// <c>Engine:DecisionLogRetentionDays</c> (default 14).</summary>
-    [Index(nameof(InstanceId), nameof(BarTs), IsUnique = true)]
+    /// <summary>One strategy decision that emitted orders (table
+    /// <c>model_decisions</c>). Written by the bot's OrderLog from the Rust
+    /// engine's signal snapshot — only for evaluations that placed ≥ 1 order
+    /// (strategies evaluate per book update; journaling every evaluation
+    /// would be thousands of rows/sec). <c>orders.DecisionId</c> points back
+    /// at the row that caused each order.</summary>
+    [Index(nameof(Account), nameof(EventTs))]
     public class ModelDecision
     {
         public long Id { get; set; }
 
-        /// <summary>Owning strategy instance id.</summary>
+        /// <summary>Trading account identity (e.g. MT login, cTrader account id).</summary>
         [MaxLength(100)]
-        public string InstanceId { get; set; } = "";
+        public string Account { get; set; } = "";
 
-        /// <summary>Package content hash (sha256 hex).</summary>
-        [MaxLength(64)]
-        public string PackageId { get; set; } = "";
+        /// <summary>Venue family: "mt4" | "mt5" | "ctrader" | "alpaca" | "sim".</summary>
+        [MaxLength(20)]
+        public string VenueKind { get; set; } = "";
 
-        /// <summary>Closed-bar bucket start, unix seconds.</summary>
-        public long BarTs { get; set; }
+        /// <summary>Venue row id where known (ctrader/alpaca); null for fleet terminals.</summary>
+        public Guid? VenueId { get; set; }
 
-        /// <summary>Runtime step counter (1-based).</summary>
-        public long Step { get; set; }
+        [MaxLength(100)]
+        public string Symbol { get; set; } = "";
 
-        /// <summary>The 6 × nLegs bar doubles fed to the runtime, as a JSON array.</summary>
-        public string InputJson { get; set; } = "[]";
+        /// <summary>Strategy descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+        [MaxLength(200)]
+        public string Strategy { get; set; } = "";
 
-        /// <summary>Model forecast (null while warming or on NaN).</summary>
+        /// <summary>Exchange timestamp of the book update that triggered the decision.</summary>
+        public DateTime EventTs { get; set; }
+
+        /// <summary>Dimensionless strategy signal (null when none was computed,
+        /// e.g. warm-up or degraded inference).</summary>
         public double? Forecast { get; set; }
 
-        /// <summary>Per-leg dimensionless targets, JSON array.</summary>
-        public string TargetsJson { get; set; } = "[]";
-
-        /// <summary>Runtime status: "warmup" | "active" | "degraded".</summary>
+        /// <summary>Signal status: "warmup" | "active" | "degraded".</summary>
         [MaxLength(20)]
         public string Status { get; set; } = "";
 
-        /// <summary>True when the model was scheduled this bar.</summary>
-        public bool Fired { get; set; }
-
-        /// <summary>Native step wall time, microseconds.</summary>
-        public int LatencyUs { get; set; }
-
-        /// <summary>Order-book features at bar close (JSON object from the
-        /// venue's depth plane); null when the venue publishes no depth or the
-        /// book was stale.</summary>
-        public string? BookJson { get; set; }
+        /// <summary>Top-of-book + position snapshot the strategy acted on, JSON object.</summary>
+        public string BookJson { get; set; } = "{}";
 
         public DateTime CreatedAt { get; set; }
     }

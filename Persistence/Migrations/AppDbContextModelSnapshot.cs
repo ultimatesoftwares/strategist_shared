@@ -655,54 +655,50 @@ namespace Server.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<long>("BarTs")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("BookJson")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("Fired")
-                        .HasColumnType("boolean");
+                    b.Property<DateTime>("EventTs")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<double?>("Forecast")
                         .HasColumnType("double precision");
-
-                    b.Property<string>("InputJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("InstanceId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("LatencyUs")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PackageId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<long>("Step")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TargetsJson")
+                    b.Property<string>("Strategy")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("VenueId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VenueKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("InstanceId", "BarTs")
-                        .IsUnique();
+                    b.HasIndex("Account", "EventTs");
 
                     b.ToTable("model_decisions", (string)null);
                 });
