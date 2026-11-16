@@ -22,7 +22,11 @@ public static class Permissions
     public const string RolesRead = "roles.read";
     /// <summary>Create/delete roles and grant their permissions.</summary>
     public const string RolesManage = "roles.manage";
+    /// <summary>Browse projects, their strategy pipelines and activity.</summary>
+    public const string ProjectsRead = "projects.read";
+    /// <summary>Create/edit/delete projects and manage their strategy links.</summary>
+    public const string ProjectsManage = "projects.manage";
 
     public static readonly string[] All =
-        [UsersRead, UsersManage, RolesRead, RolesManage];
+        [UsersRead, UsersManage, RolesRead, RolesManage, ProjectsRead, ProjectsManage];
 }
