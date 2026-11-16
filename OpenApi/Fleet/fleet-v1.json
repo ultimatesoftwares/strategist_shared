@@ -703,15 +703,7 @@
             "type": "string"
           },
           "port": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "listening": {
@@ -737,21 +729,7 @@
             "nullable": true
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int32",
             "nullable": true
           },
@@ -784,78 +762,22 @@
             "$ref": "#/components/schemas/ProcessState"
           },
           "pid": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int32",
             "nullable": true
           },
           "startedAtUnixMs": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int64",
             "nullable": true
           },
           "exitCode": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int32",
             "nullable": true
           },
           "exitedAtUnixMs": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int64",
             "nullable": true
           },
