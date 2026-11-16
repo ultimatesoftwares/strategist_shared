@@ -306,7 +306,7 @@
         "tags": [
           "Accounts"
         ],
-        "summary": "Trip the risk kill switch: all new orders are blocked until reset.",
+        "summary": "Trip the risk kill switch: all new orders are blocked until reset.\n    Journaled: the trip survives account reconnects and bot restarts.",
         "parameters": [
           {
             "name": "name",
@@ -809,47 +809,38 @@
         }
       }
     },
-    "/api/projects": {
+    "/api/settings": {
       "get": {
         "tags": [
-          "Projects"
+          "Settings"
         ],
-        "summary": "List projects with member/strategy counts; filter with ?status=.",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "summary": "Configured defaults, journaled overrides, and the effective result.",
         "responses": {
           "200": {
             "description": "OK"
           }
         }
       },
-      "post": {
+      "put": {
         "tags": [
-          "Projects"
+          "Settings"
         ],
-        "summary": "Create a project (starts in Draft).",
+        "summary": "Edit the engine settings. Only the fields sent change; risk, riskGate,\nand strategy replace their whole block. Affected accounts restart on\nthe reconcile this edit triggers.",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
+                "$ref": "#/components/schemas/UpdateEngineSettings"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
+                "$ref": "#/components/schemas/UpdateEngineSettings"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
+                "$ref": "#/components/schemas/UpdateEngineSettings"
               }
             }
           },
@@ -862,285 +853,12 @@
         }
       }
     },
-    "/api/projects/{id}": {
-      "get": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "One project with its strategy pipeline and recent activity.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
+    "/api/settings/overrides": {
       "delete": {
         "tags": [
-          "Projects"
+          "Settings"
         ],
-        "summary": "Delete a project and everything hanging off it.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/projects/{id}/status": {
-      "post": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Move the project between Draft, Active, and Archived.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectStatusRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectStatusRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProjectStatusRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/projects/{id}/strategies": {
-      "get": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "The project's strategy links, newest first; filter with ?stage=.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "stage",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Link a strategy package into the pipeline (defaults to the research stage).",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkStrategyRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkStrategyRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkStrategyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/projects/{id}/strategies/{linkId}/stage": {
-      "post": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Advance (or demote) a linked strategy through research → development → approved.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "linkId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StrategyStageRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StrategyStageRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/StrategyStageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/projects/{id}/strategies/{linkId}": {
-      "delete": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Remove a strategy from the project pipeline.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "linkId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/projects/{id}/activity": {
-      "get": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "The project's audit trail, newest first.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32",
-              "default": 100
-            }
-          }
-        ],
+        "summary": "Drop every override, reverting to the configured defaults.",
         "responses": {
           "200": {
             "description": "OK"
@@ -1646,23 +1364,6 @@
           }
         }
       },
-      "CreateProjectRequest": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "KillSwitchRequest": {
         "required": [
           "reason"
@@ -1670,29 +1371,6 @@
         "type": "object",
         "properties": {
           "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "LinkStrategyRequest": {
-        "required": [
-          "packageId"
-        ],
-        "type": "object",
-        "properties": {
-          "packageId": {
-            "type": "string"
-          },
-          "stage": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "notes": {
             "type": [
               "null",
               "string"
@@ -1728,25 +1406,94 @@
           }
         }
       },
-      "ProjectStatusRequest": {
-        "required": [
-          "status"
-        ],
+      "RiskGateSettings": {
         "type": "object",
         "properties": {
-          "status": {
-            "type": "string"
+          "maxOrderNotional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maxOrdersPerMinute": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "startTripped": {
+            "type": "boolean"
           }
         }
       },
-      "StrategyStageRequest": {
-        "required": [
-          "stage"
-        ],
+      "RiskSettings": {
         "type": "object",
         "properties": {
-          "stage": {
+          "maxPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxOrderQty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "maxOpenOrders": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          }
+        }
+      },
+      "StrategySettings": {
+        "type": "object",
+        "properties": {
+          "kind": {
             "type": "string"
+          },
+          "entryThresholdBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "orderQty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "modelPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signalThresholdBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -1833,6 +1580,81 @@
           }
         }
       },
+      "UpdateEngineSettings": {
+        "type": "object",
+        "properties": {
+          "observeOnly": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "recordData": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "positionSyncSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "risk": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RiskSettings"
+              }
+            ]
+          },
+          "riskGate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RiskGateSettings"
+              }
+            ]
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StrategySettings"
+              }
+            ]
+          },
+          "alpacaQuantityPerEngineLot": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "cTraderVolumePerEngineLot": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        },
+        "description": "One PUT /api/settings edit. Everything is optional — only the fields sent\nchange; RiskSettings? UpdateEngineSettings.Risk, RiskGateSettings? UpdateEngineSettings.RiskGate, and\nStrategySettings? UpdateEngineSettings.Strategy replace their whole block when present."
+      },
       "UpdateInstrumentRequest": {
         "type": "object",
         "properties": {
@@ -1896,7 +1718,7 @@
       "name": "Instruments"
     },
     {
-      "name": "Projects"
+      "name": "Settings"
     },
     {
       "name": "Terminals"
