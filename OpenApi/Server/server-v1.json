@@ -37,6 +37,19 @@
         }
       }
     },
+    "/api/v1/fleet/token": {
+      "post": {
+        "tags": [
+          "Fleet"
+        ],
+        "operationId": "Fleet_Create",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/profile": {
       "get": {
         "tags": [
@@ -1388,6 +1401,9 @@
   "tags": [
     {
       "name": "Server"
+    },
+    {
+      "name": "Fleet"
     },
     {
       "name": "Profile"

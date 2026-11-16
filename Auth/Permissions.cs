@@ -26,7 +26,10 @@ public static class Permissions
     public const string ProjectsRead = "projects.read";
     /// <summary>Create/edit/delete projects and manage their strategy links.</summary>
     public const string ProjectsManage = "projects.manage";
+    /// <summary>Obtain fleet access tokens (POST /api/v1/fleet/token) for the
+    /// fleetd control plane.</summary>
+    public const string FleetAccess = "fleet.access";
 
     public static readonly string[] All =
-        [UsersRead, UsersManage, RolesRead, RolesManage, ProjectsRead, ProjectsManage];
+        [UsersRead, UsersManage, RolesRead, RolesManage, ProjectsRead, ProjectsManage, FleetAccess];
 }
