@@ -68,8 +68,11 @@ tables" above). One remains unused:
 
 Notes on the hooked six (realism gaps / limitations):
 
-- `orders` rows carry no `RealizedPnl`, `RejectReason`, or `DecisionId` —
-  the execution report doesn't surface them and no decision journal exists.
+- `orders` rows now carry `RejectReason` (broker refusals via the adapters'
+  `IRejectReasonSource` stash; pre-trade gate denials verbatim) and
+  `RealizedPnl` (per-session average-cost attribution by `PositionLedger` —
+  fills-the-log-saw only, price units × lots, not statement truth).
+  `DecisionId` stays null pending the decision journal.
 - `backtest_results` rows written by the engine mirror have an empty
   `PackageId` (ad-hoc engine jobs are not package-driven).
 - `strategy_packages` "validated" means structurally validated (readable
