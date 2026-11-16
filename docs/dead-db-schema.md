@@ -23,8 +23,9 @@ usage is a complete census.
 
 - The 11 tables of the two dead clusters (fleet hub registry + engine
   orchestration) were dropped on 2026-11-16 (migrations below).
-- 7 further tables have no consumer today but are **kept by decision**
-  (future features) — see the "kept" list below.
+- Of the 7 tables that were kept by decision, **6 were hooked up on
+  2026-11-16** (writers/endpoints listed under "Live tables"); only
+  `model_decisions` remains unused (deferred, see below).
 - QuestDB `bars` and `ticks` are both live.
 - The ASP.NET Identity side tables are framework-managed; keep them.
 
@@ -43,6 +44,12 @@ usage is a complete census.
 | `project_members` | `strategist_server` `Controllers/ProjectsController.cs` |
 | `project_strategy_links` | `strategist_server` `Controllers/ProjectsController.cs` |
 | `project_activity` | `strategist_server` `Controllers/ProjectsController.cs` |
+| `project_documents` | `strategist_server` `Controllers/ProjectDocumentsController.cs` (hooked 2026-11-16; files under `Server:ProjectsDir`) |
+| `project_risk_policies` | `strategist_server` `Controllers/ProjectRiskPoliciesController.cs` (hooked 2026-11-16; versioned rules, single-active invariant) |
+| `strategy_packages` | `strategist_server` `Controllers/PackagesController.cs` (hooked 2026-11-16; content-addressed `.sgpkg` registry under `Server:PackagesDir`, promotion ladder) |
+| `backtest_results` | `strategist_bot` `src/BacktestEngine/Api/BacktestResultMirror.cs` (hooked 2026-11-16; fail-open mirror of the job journal, on when "database" is enabled) |
+| `orders` | `strategist_bot` `src/Bot/Hosting/OrderLog.cs` (hooked 2026-11-16; fills/cancels/rejects from fleet execution reports, bounded-channel writer) |
+| `provision_jobs` | `strategist_bot` `src/Bot/Hosting/ProvisionJobMirror.cs` (hooked 2026-11-16; mirrors history fetch manifests from `HistoricalDataService.SaveManifest`) |
 | `fleet_terminals` | `strategist_fleet` `Service/DbTerminalConfigStore.cs`, `Program.cs` |
 
 QuestDB: `bars`, `ticks` — written/read by `strategist_bot`
@@ -52,18 +59,25 @@ QuestDB: `bars`, `ticks` — written/read by `strategist_bot`
 
 ## Unused tables kept by decision (do NOT drop)
 
-These 7 tables have no consumer in any repo today, but are **kept on
-purpose** (2026-11-16 decision) for planned features:
+Of the 7 tables kept on 2026-11-16, 6 were hooked the same day (see "Live
+tables" above). One remains unused:
 
-| Table | Entity | Notes / what replaced it |
+| Table | Entity | Notes |
 |---|---|---|
-| `orders` | `Order` | Old server order log. The bot's OMS keeps order state in-memory (`Trading.Accounts`, `account.Orders`); nothing touches `db.Orders`. Carries the `DecisionId` FK to `model_decisions` (`20261112003757_AddOrderDecisionLink`), which dies with it. |
-| `model_decisions` | `ModelDecision` | Old engine decision journal (incl. `BookJson` column from `20261111110422`). No writer or reader. |
-| `strategy_packages` | `StrategyPackage` | Old packaging/publish flow. |
-| `backtest_results` | `BacktestResult` | BacktestEngine now journals jobs as JSON (`BacktestJobStore` journal dir) and reads market data from QuestDB; Postgres is not involved. |
-| `provision_jobs` | `ProvisionJob` | Both successors avoid it: bot history fetches persist JSON manifests (`Hosting/HistoricalDataService.cs`); fleet's `Service/TerminalProvisioner.cs` uses its own **private in-memory `ProvisionJob` class** (same name, not the entity). |
-| `project_documents` | `ProjectDocument` | Never got a consumer after the split. |
-| `project_risk_policies` | `ProjectRiskPolicy` | Never got a consumer after the split. |
+| `model_decisions` | `ModelDecision` | **Deferred.** No emitter exists anywhere: the Rust strategy core surfaces only order commands (no decision callback), and the planned `/api/model-replay` endpoint was never built. The `orders.DecisionId` FK stays null until a core decision journal lands. Hook it when the core exposes decisions. |
+
+Notes on the hooked six (realism gaps / limitations):
+
+- `orders` rows carry no `RealizedPnl`, `RejectReason`, or `DecisionId` —
+  the execution report doesn't surface them and no decision journal exists.
+- `backtest_results` rows written by the engine mirror have an empty
+  `PackageId` (ad-hoc engine jobs are not package-driven).
+- `strategy_packages` "validated" means structurally validated (readable
+  zip + sane `manifest.json`); native-core validation is a documented gap.
+- `provision_jobs` is a mirror of the on-disk manifests, which remain the
+  source of truth for resume-after-restart; rows prune an hour after a
+  job finishes. Manifests written before the mirror landed lack
+  `ListingId` (deserializes as `Guid.Empty`).
 
 ### Dropped 2026-11-16: fleet hub registry cluster
 
