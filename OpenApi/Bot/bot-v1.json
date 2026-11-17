@@ -1651,6 +1651,15 @@
               "string"
             ],
             "format": "int64"
+          },
+          "metaTraderLotsPerEngineLot": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         },
         "description": "One PUT /api/settings edit. Everything is optional — only the fields sent\nchange; RiskSettings? UpdateEngineSettings.Risk, RiskGateSettings? UpdateEngineSettings.RiskGate, and\nStrategySettings? UpdateEngineSettings.Strategy replace their whole block when present."
