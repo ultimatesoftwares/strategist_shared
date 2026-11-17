@@ -661,7 +661,7 @@
         "tags": [
           "Instruments"
         ],
-        "summary": "Venue catalog entries; filter with ?accountKey=, ?q=, ?unmapped=true.",
+        "summary": "Venue catalog entries; filter with ?accountKey=, ?q=,\n    ?unmapped=true. Page with ?limit= and ?offset= — the response is a\n    plain array, so walk offsets until a short page. Full per-account\n    counts live on catalog/accounts.",
         "parameters": [
           {
             "name": "accountKey",
@@ -696,6 +696,19 @@
               ],
               "format": "int32",
               "default": 500
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 0
             }
           }
         ],
