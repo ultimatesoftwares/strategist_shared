@@ -792,7 +792,7 @@
         "tags": [
           "Instruments"
         ],
-        "summary": "Manually resync one running account's catalog (?account=NAME),\n    or every running account when the parameter is omitted.",
+        "summary": "Manually resync one running venue's catalog (?account=NAME,\n    a broker account name or a connected terminal id), or every running\n    account and connected terminal when the parameter is omitted.",
         "parameters": [
           {
             "name": "account",
