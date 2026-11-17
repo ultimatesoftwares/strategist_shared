@@ -988,6 +988,42 @@
         }
       }
     },
+    "/api/terminals/{terminalId}/positions/{ticket}/close": {
+      "post": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Close a single open position by ticket (full close, opposite deal).",
+        "parameters": [
+          {
+            "name": "terminalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "uint64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/terminals/{terminalId}/close-all": {
       "post": {
         "tags": [
