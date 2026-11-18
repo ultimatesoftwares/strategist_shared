@@ -18,12 +18,6 @@ public sealed class StrategistJwtOptions
     /// <summary>Default for both issuer and audience.</summary>
     public const string DefaultIssuer = "strategist-server";
 
-    /// <summary>Audience of the short-lived fleet tokens the server mints for
-    /// the fleetd admin API (POST api/v1/fleet/token). fleetd validates with
-    /// <see cref="CreateTokenValidationParameters"/> passing this audience;
-    /// regular access tokens (audience <see cref="Audience"/>) don't pass.</summary>
-    public const string FleetAudience = "fleetd";
-
     /// <summary>The ES256 key. Contains the private half only when this
     /// process is allowed to sign (<see cref="CanSign"/>); validation works
     /// either way.</summary>
@@ -92,7 +86,7 @@ public sealed class StrategistJwtOptions
 
     /// <summary>Validation parameters matching what the server signs.
     /// <paramref name="audience"/> overrides the accepted audience for
-    /// scoped tokens (e.g. <see cref="FleetAudience"/>).</summary>
+    /// scoped tokens.</summary>
     public TokenValidationParameters CreateTokenValidationParameters(string? audience = null) => new()
     {
         ValidIssuer = Issuer,

@@ -26,8 +26,8 @@ public static class Permissions
     public const string ProjectsRead = "projects.read";
     /// <summary>Create/edit/delete projects and manage their strategy links.</summary>
     public const string ProjectsManage = "projects.manage";
-    /// <summary>Obtain fleet access tokens (POST /api/v1/fleet/token) for the
-    /// fleetd control plane.</summary>
+    /// <summary>Manage the MetaTrader terminal fleet: terminal containers
+    /// (api/v1/terminals) and the terminal image (api/v1/image).</summary>
     public const string FleetAccess = "fleet.access";
     /// <summary>Browse the research plane: backtest jobs and results, history
     /// fetch jobs, the instrument registry and venue catalogs.</summary>
