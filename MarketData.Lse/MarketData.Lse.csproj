@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="MarketData.Lse.Tests" />
+    <InternalsVisibleTo Include="Server.Tests" />
   </ItemGroup>
 
 </Project>

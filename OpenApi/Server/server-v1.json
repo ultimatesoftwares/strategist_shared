@@ -1,5 +1,5 @@
 {
-  "openapi": "3.1.1",
+  "openapi": "3.1.2",
   "info": {
     "title": "Server API",
     "description": "REST surface of the server (attribute-routed controllers in Server/Controllers).",
@@ -37,12 +37,674 @@
         }
       }
     },
+    "/api/v1/backtests": {
+      "post": {
+        "tags": [
+          "Backtests"
+        ],
+        "operationId": "Backtests_Start",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "operationId": "Backtests_List",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestJobView"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestJobView"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestJobView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/{id}": {
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "operationId": "Backtests_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestJobView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Backtests"
+        ],
+        "operationId": "Backtests_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fleet/token": {
       "post": {
         "tags": [
           "Fleet"
         ],
         "operationId": "Fleet_Create",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/history": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_List",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/history/sources": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_Sources",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/history/{id}": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_List",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetClass",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/signup": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_SignupFromCatalog",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_Catalog",
+        "parameters": [
+          {
+            "name": "accountKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unmapped",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "mapped",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 500
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog/accounts": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_CatalogAccounts",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog/{entryId}/map": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_MapEntry",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/catalog/{entryId}/unmap": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_UnmapEntry",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -1697,6 +2359,339 @@
   },
   "components": {
     "schemas": {
+      "BacktestJobView": {
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "request",
+          "error",
+          "result"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "request": {
+            "$ref": "#/components/schemas/BacktestRequest"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BacktestResultView"
+              }
+            ]
+          }
+        }
+      },
+      "BacktestRequest": {
+        "type": "object",
+        "properties": {
+          "dataFile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "questDb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/QuestDbSpec"
+              }
+            ]
+          },
+          "generate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GenerateSpec"
+              }
+            ]
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StrategySpec"
+              }
+            ]
+          },
+          "priceScale": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 100
+          },
+          "costs": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CostSpec"
+              }
+            ]
+          },
+          "monteCarlo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MonteCarloSpec"
+              }
+            ]
+          },
+          "walkForward": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WalkForwardSpec"
+              }
+            ]
+          },
+          "sweep": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SweepSpec"
+              }
+            ]
+          },
+          "includeEquityCurve": {
+            "type": "boolean",
+            "default": false
+          },
+          "includeTrades": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "BacktestResultView": {
+        "required": [
+          "run",
+          "monteCarlo",
+          "walkForward",
+          "sweep"
+        ],
+        "type": "object",
+        "properties": {
+          "run": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunResultView"
+              }
+            ]
+          },
+          "monteCarlo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MonteCarloResult"
+              }
+            ]
+          },
+          "walkForward": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WalkForwardResult"
+              }
+            ]
+          },
+          "sweep": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SweepResultView"
+              }
+            ]
+          }
+        }
+      },
+      "CatalogSignupRequest": {
+        "required": [
+          "catalogEntryId"
+        ],
+        "type": "object",
+        "properties": {
+          "catalogEntryId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CostSpec": {
+        "type": "object",
+        "properties": {
+          "commissionBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 0
+          },
+          "commissionPerFill": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          },
+          "takerSlippage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          }
+        }
+      },
+      "CreateHistoryFetchRequest": {
+        "required": [
+          "fromUtc",
+          "toUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "fromUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "instrumentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "symbol": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CreateInstrumentRequest": {
+        "required": [
+          "symbol",
+          "assetClass"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "assetClass": {
+            "type": "string"
+          },
+          "baseCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quoteCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradable": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "CreatePolicyBody": {
         "required": [
           "name"
@@ -1824,6 +2819,165 @@
           }
         }
       },
+      "Distribution": {
+        "required": [
+          "p5",
+          "p25",
+          "p50",
+          "p75",
+          "p95",
+          "mean",
+          "stdDev"
+        ],
+        "type": "object",
+        "properties": {
+          "p5": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "p25": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "p50": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "p75": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "p95": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "mean": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stdDev": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "EquityPoint": {
+        "type": "object",
+        "properties": {
+          "tsNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "equity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "position": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "GenerateSpec": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 10000
+          },
+          "seed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 42
+          },
+          "symbol": {
+            "type": "string",
+            "default": "SIM-BT"
+          }
+        }
+      },
+      "GridSpec": {
+        "type": "object",
+        "properties": {
+          "thresholds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64"
+            }
+          },
+          "quantities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "uint64"
+            }
+          }
+        }
+      },
       "IFormFile": {
         "type": "string",
         "format": "binary"
@@ -1851,6 +3005,387 @@
           }
         }
       },
+      "MapCatalogRequest": {
+        "required": [
+          "instrumentId"
+        ],
+        "type": "object",
+        "properties": {
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MonteCarloMethod": {
+        "type": "integer"
+      },
+      "MonteCarloResult": {
+        "required": [
+          "method",
+          "iterations",
+          "tradesPerIteration",
+          "seed",
+          "finalPnl",
+          "maxDrawdown",
+          "probabilityOfLoss",
+          "probabilityDrawdownExceedsOriginal",
+          "riskOfRuin",
+          "ruinEquity",
+          "originalPnl",
+          "originalMaxDrawdown"
+        ],
+        "type": "object",
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/MonteCarloMethod"
+          },
+          "iterations": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tradesPerIteration": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "seed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "finalPnl": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "maxDrawdown": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "probabilityOfLoss": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "probabilityDrawdownExceedsOriginal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "riskOfRuin": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ruinEquity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "originalPnl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "originalMaxDrawdown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "MonteCarloSpec": {
+        "type": "object",
+        "properties": {
+          "iterations": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 1000
+          },
+          "seed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 42
+          },
+          "method": {
+            "type": "string",
+            "default": "bootstrap"
+          },
+          "ruinEquity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          }
+        }
+      },
+      "OptimizationObjective": {
+        "type": "integer"
+      },
+      "PerformanceStats": {
+        "required": [
+          "totalPnl",
+          "totalCommission",
+          "sharpe",
+          "sortino",
+          "annualized",
+          "maxDrawdown",
+          "maxDrawdownDurationNanos",
+          "returnOverMaxDrawdown",
+          "roundTrips",
+          "winRate",
+          "profitFactor",
+          "avgWin",
+          "avgLoss",
+          "expectancy",
+          "largestWin",
+          "largestLoss",
+          "maxConsecutiveWins",
+          "maxConsecutiveLosses",
+          "avgHoldingNanos",
+          "tradeVar95",
+          "tradeCvar95",
+          "exposure",
+          "volume",
+          "takerFills",
+          "makerFills"
+        ],
+        "type": "object",
+        "properties": {
+          "totalPnl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalCommission": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sharpe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sortino": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "annualized": {
+            "type": "boolean"
+          },
+          "maxDrawdown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxDrawdownDurationNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "returnOverMaxDrawdown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "roundTrips": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "winRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "profitFactor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "avgWin": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "avgLoss": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expectancy": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "largestWin": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "largestLoss": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxConsecutiveWins": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxConsecutiveLosses": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "avgHoldingNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tradeVar95": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tradeCvar95": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "exposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "volume": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "takerFills": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "makerFills": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PermissionsBody": {
         "required": [
           "permissions"
@@ -1868,6 +3403,44 @@
           }
         }
       },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ProjectStatusBody": {
         "required": [
           "status"
@@ -1876,6 +3449,33 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "QuestDbSpec": {
+        "required": [
+          "symbol",
+          "fromUtc",
+          "toUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "fromUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1962,6 +3562,387 @@
           }
         }
       },
+      "RoundTrip": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "entryTsNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "exitTsNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Side"
+          },
+          "qty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "entryPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "exitPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "pnl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "holdingNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          }
+        }
+      },
+      "RunResultView": {
+        "required": [
+          "recordsReplayed",
+          "updatesPerSecond",
+          "ordersPlaced",
+          "ordersCancelled",
+          "fills",
+          "realizedCashFlowRaw",
+          "realizedCashFlow",
+          "totalCommissionRaw",
+          "totalCommission",
+          "maxAbsPosition",
+          "finalPositions",
+          "markToMarketPnlRaw",
+          "markToMarketPnl",
+          "elapsedSeconds",
+          "stats",
+          "equityCurve",
+          "trades"
+        ],
+        "type": "object",
+        "properties": {
+          "recordsReplayed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updatesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ordersPlaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordersCancelled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fills": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "realizedCashFlowRaw": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "realizedCashFlow": {
+            "type": "string"
+          },
+          "totalCommissionRaw": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalCommission": {
+            "type": "string"
+          },
+          "maxAbsPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "finalPositions": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64"
+            }
+          },
+          "markToMarketPnlRaw": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "markToMarketPnl": {
+            "type": "string"
+          },
+          "elapsedSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/PerformanceStats"
+          },
+          "equityCurve": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EquityPoint"
+            }
+          },
+          "trades": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RoundTrip"
+            }
+          }
+        }
+      },
+      "RunSummary": {
+        "required": [
+          "threshold",
+          "qty",
+          "records",
+          "netPnl",
+          "sharpe",
+          "sortino",
+          "maxDrawdown",
+          "profitFactor",
+          "winRate",
+          "trades",
+          "fills",
+          "score"
+        ],
+        "type": "object",
+        "properties": {
+          "threshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "qty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "records": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "netPnl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sharpe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sortino": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maxDrawdown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "profitFactor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "winRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "trades": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fills": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Side": {
+        "type": "integer"
+      },
+      "StrategySpec": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "default": "imbalanceQuoter"
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "threshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          },
+          "qty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64",
+            "default": 0
+          },
+          "exitThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          },
+          "maxHoldBars": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
+          }
+        }
+      },
       "StrategyStageBody": {
         "required": [
           "stage"
@@ -1970,6 +3951,43 @@
         "properties": {
           "stage": {
             "type": "string"
+          }
+        }
+      },
+      "SweepResultView": {
+        "required": [
+          "objective",
+          "best",
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string"
+          },
+          "best": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            }
+          }
+        }
+      },
+      "SweepSpec": {
+        "required": [
+          "grid"
+        ],
+        "type": "object",
+        "properties": {
+          "grid": {
+            "$ref": "#/components/schemas/GridSpec"
+          },
+          "objective": {
+            "type": "string",
+            "default": "sharpe"
           }
         }
       },
@@ -2001,6 +4019,56 @@
             "type": [
               "null",
               "string"
+            ]
+          }
+        }
+      },
+      "UpdateInstrumentRequest": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assetClass": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baseCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quoteCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradable": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }
@@ -2044,15 +4112,233 @@
             ]
           }
         }
+      },
+      "WalkForwardResult": {
+        "required": [
+          "folds",
+          "trainBlocks",
+          "anchored",
+          "objective",
+          "gridSize",
+          "windows",
+          "outOfSamplePnl",
+          "outOfSampleTrades",
+          "outOfSampleWinRate",
+          "outOfSampleMaxDrawdown",
+          "walkForwardEfficiency",
+          "consistencyScore"
+        ],
+        "type": "object",
+        "properties": {
+          "folds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trainBlocks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "anchored": {
+            "type": "boolean"
+          },
+          "objective": {
+            "$ref": "#/components/schemas/OptimizationObjective"
+          },
+          "gridSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalkForwardWindow"
+            }
+          },
+          "outOfSamplePnl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "outOfSampleTrades": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "outOfSampleWinRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "outOfSampleMaxDrawdown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "walkForwardEfficiency": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "consistencyScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "WalkForwardSpec": {
+        "type": "object",
+        "properties": {
+          "folds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 5
+          },
+          "trainBlocks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 3
+          },
+          "anchored": {
+            "type": "boolean",
+            "default": false
+          },
+          "objective": {
+            "type": "string",
+            "default": "sharpe"
+          },
+          "grid": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GridSpec"
+              }
+            ]
+          }
+        }
+      },
+      "WalkForwardWindow": {
+        "required": [
+          "index",
+          "trainStart",
+          "trainLength",
+          "testStart",
+          "testLength",
+          "inSample",
+          "outOfSample"
+        ],
+        "type": "object",
+        "properties": {
+          "index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trainStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trainLength": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "testStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "testLength": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "inSample": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "outOfSample": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "efficiency": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
       }
     }
   },
   "tags": [
     {
-      "name": "Server"
+      "name": "Backtests"
     },
     {
       "name": "Fleet"
+    },
+    {
+      "name": "History"
+    },
+    {
+      "name": "Instruments"
     },
     {
       "name": "Models"
@@ -2074,6 +4360,9 @@
     },
     {
       "name": "Roles"
+    },
+    {
+      "name": "Server"
     },
     {
       "name": "Token"

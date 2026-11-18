@@ -29,7 +29,14 @@ public static class Permissions
     /// <summary>Obtain fleet access tokens (POST /api/v1/fleet/token) for the
     /// fleetd control plane.</summary>
     public const string FleetAccess = "fleet.access";
+    /// <summary>Browse the research plane: backtest jobs and results, history
+    /// fetch jobs, the instrument registry and venue catalogs.</summary>
+    public const string ResearchRead = "research.read";
+    /// <summary>Run backtests, queue history fetches, and manage the
+    /// instrument registry (signup, mapping, deletion).</summary>
+    public const string ResearchManage = "research.manage";
 
     public static readonly string[] All =
-        [UsersRead, UsersManage, RolesRead, RolesManage, ProjectsRead, ProjectsManage, FleetAccess];
+        [UsersRead, UsersManage, RolesRead, RolesManage, ProjectsRead, ProjectsManage, FleetAccess,
+         ResearchRead, ResearchManage];
 }
