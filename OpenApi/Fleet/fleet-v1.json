@@ -6,6 +6,70 @@
     "version": "v1"
   },
   "paths": {
+    "/api/v1/image": {
+      "get": {
+        "tags": [
+          "Image"
+        ],
+        "summary": "Terminal image status",
+        "description": "Whether Fleet:TerminalImage is present on the Docker daemon.",
+        "operationId": "image_status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageStatus"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/image/pull": {
+      "post": {
+        "tags": [
+          "Image"
+        ],
+        "summary": "Pull the terminal image",
+        "description": "Pulls Fleet:TerminalImage from its registry. Running containers keep their image; restart a terminal to recreate it from the new one (its state volume is preserved).",
+        "operationId": "pull_image",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageStatus"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/terminals": {
       "get": {
         "tags": [
@@ -469,70 +533,6 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/image": {
-      "get": {
-        "tags": [
-          "Image"
-        ],
-        "summary": "Terminal image status",
-        "description": "Whether Fleet:TerminalImage is present on the Docker daemon.",
-        "operationId": "image_status",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImageStatus"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/image/pull": {
-      "post": {
-        "tags": [
-          "Image"
-        ],
-        "summary": "Pull the terminal image",
-        "description": "Pulls Fleet:TerminalImage from its registry. Running containers keep their image; restart a terminal to recreate it from the new one (its state volume is preserved).",
-        "operationId": "pull_image",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImageStatus"
                 }
               }
             }
