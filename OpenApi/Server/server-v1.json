@@ -50,21 +50,12 @@
         }
       }
     },
-    "/api/v1/packages": {
+    "/api/v1/models": {
       "get": {
         "tags": [
-          "Packages"
+          "Models"
         ],
-        "operationId": "Packages_List",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "Models_List",
         "responses": {
           "200": {
             "description": "OK"
@@ -73,19 +64,40 @@
       },
       "post": {
         "tags": [
-          "Packages"
+          "Models"
         ],
-        "operationId": "Packages_Upload",
+        "operationId": "Models_Upload",
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "file": {
-                    "$ref": "#/components/schemas/IFormFile"
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "file": {
+                        "$ref": "#/components/schemas/IFormFile"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      }
+                    }
                   }
-                }
+                ]
               }
             }
           },
@@ -98,12 +110,12 @@
         }
       }
     },
-    "/api/v1/packages/{id}": {
+    "/api/v1/models/{id}": {
       "get": {
         "tags": [
-          "Packages"
+          "Models"
         ],
-        "operationId": "Packages_Get",
+        "operationId": "Models_Get",
         "parameters": [
           {
             "name": "id",
@@ -122,9 +134,9 @@
       },
       "delete": {
         "tags": [
-          "Packages"
+          "Models"
         ],
-        "operationId": "Packages_Delete",
+        "operationId": "Models_Delete",
         "parameters": [
           {
             "name": "id",
@@ -142,12 +154,12 @@
         }
       }
     },
-    "/api/v1/packages/{id}/archive": {
+    "/api/v1/models/{id}/file": {
       "get": {
         "tags": [
-          "Packages"
+          "Models"
         ],
-        "operationId": "Packages_Download",
+        "operationId": "Models_Download",
         "parameters": [
           {
             "name": "id",
@@ -158,49 +170,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/packages/{id}/promote": {
-      "post": {
-        "tags": [
-          "Packages"
-        ],
-        "operationId": "Packages_Promote",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PromoteBody"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PromoteBody"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/PromoteBody"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1861,11 +1830,11 @@
       },
       "LinkStrategyBody": {
         "required": [
-          "packageId"
+          "modelId"
         ],
         "type": "object",
         "properties": {
-          "packageId": {
+          "modelId": {
             "type": "string"
           },
           "stage": {
@@ -1907,23 +1876,6 @@
         "properties": {
           "status": {
             "type": "string"
-          }
-        }
-      },
-      "PromoteBody": {
-        "required": [
-          "stage"
-        ],
-        "type": "object",
-        "properties": {
-          "stage": {
-            "type": "string"
-          },
-          "note": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -2103,7 +2055,7 @@
       "name": "Fleet"
     },
     {
-      "name": "Packages"
+      "name": "Models"
     },
     {
       "name": "Profile"

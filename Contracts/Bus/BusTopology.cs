@@ -37,17 +37,3 @@ public static class EngineStateBus
     public static string StrategyHealthSubject(string instanceId) => $"health.strategy.{instanceId}";
     public const string StrategyHealthSubjectPrefix = "health.strategy.";
 }
-
-/// <summary>
-/// The master ↔ Backtest-slave job plane. The queue transport (RabbitMQ)
-/// was retired; job dispatch/progress ride gRPC. The wire shapes
-/// (<see cref="V1.PackageBacktestJobMessage"/>,
-/// <see cref="V1.PackageBacktestStateMessage"/>, <see cref="V1.WorkerHeartbeat"/>)
-/// are unchanged.
-/// </summary>
-public static class BacktestQueue
-{
-    /// <summary>Heartbeat cadence; the server treats a running row whose id
-    /// is absent from fresh heartbeats as lost on the worker.</summary>
-    public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(5);
-}

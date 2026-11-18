@@ -33,7 +33,7 @@ namespace Server.Data
 
         public DbSet<ModelDecision> ModelDecisions => Set<ModelDecision>();
         public DbSet<InstrumentCatalogEntry> InstrumentCatalog => Set<InstrumentCatalogEntry>();
-        public DbSet<StrategyPackage> StrategyPackages => Set<StrategyPackage>();
+        public DbSet<StrategyModel> StrategyModels => Set<StrategyModel>();
         public DbSet<BacktestResult> BacktestResults => Set<BacktestResult>();
         public DbSet<ProvisionJob> ProvisionJobs => Set<ProvisionJob>();
 
@@ -100,23 +100,16 @@ namespace Server.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // Immutable validated strategy packages (quant platform M1, D9):
-            // content-hash PK, manifest as queryable jsonb. PromotionHistory is
-            // the M6 stage-advance audit trail.
-            builder.Entity<StrategyPackage>(e =>
-            {
-                e.ToTable("strategy_packages");
-                e.Property(x => x.ManifestJson).HasColumnType("jsonb");
-                e.Property(x => x.PromotionHistory).HasColumnType("jsonb");
-            });
+            // Registered ONNX strategy models: content-hash PK, blob on disk,
+            // row is the catalog entry.
+            builder.Entity<StrategyModel>(e => e.ToTable("strategy_models"));
 
             // Strategy decision journal: bot-written (OrderLog) for
             // evaluations that emitted orders; orders.DecisionId links back.
             builder.Entity<ModelDecision>(e => e.ToTable("model_decisions"));
 
-            // Quant-package backtest results (quant platform M4, D9) — keyed by
-            // the bus job id directly (M4 design freeze); summary/report are
-            // queryable jsonb like strategy_packages.ManifestJson.
+            // Research-engine backtest results — keyed by the job id;
+            // summary/report are queryable jsonb.
             builder.Entity<BacktestResult>(e =>
             {
                 e.ToTable("backtest_results");
@@ -186,7 +179,7 @@ namespace Server.Data
             builder.Entity<ProjectStrategyLink>(e =>
             {
                 e.ToTable("project_strategy_links");
-                e.HasIndex(l => new { l.ProjectId, l.PackageId }).IsUnique();
+                e.HasIndex(l => new { l.ProjectId, l.ModelId }).IsUnique();
                 e.HasOne(l => l.Project).WithMany()
                     .HasForeignKey(l => l.ProjectId)
                     .OnDelete(DeleteBehavior.Cascade);

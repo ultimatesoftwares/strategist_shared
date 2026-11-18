@@ -355,11 +355,6 @@ namespace Server.Migrations
                     b.Property<long>("OosFromTs")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("PackageId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<string>("ReportJson")
                         .HasColumnType("jsonb");
 
@@ -982,15 +977,15 @@ namespace Server.Migrations
                     b.Property<Guid?>("LinkedById")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("PackageId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
@@ -1007,7 +1002,7 @@ namespace Server.Migrations
 
                     b.HasIndex("LinkedById");
 
-                    b.HasIndex("ProjectId", "PackageId")
+                    b.HasIndex("ProjectId", "ModelId")
                         .IsUnique();
 
                     b.ToTable("project_strategy_links", (string)null);
@@ -1074,21 +1069,11 @@ namespace Server.Migrations
                     b.ToTable("provision_jobs", (string)null);
                 });
 
-            modelBuilder.Entity("Server.Models.StrategyPackage", b =>
+            modelBuilder.Entity("Server.Models.StrategyModel", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
-
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("CoreVersion")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -1098,35 +1083,27 @@ namespace Server.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
-                    b.Property<string>("ManifestJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("PromotionHistory")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("StoragePath")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<string>("UploadedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.HasKey("Id");
 
-                    b.ToTable("strategy_packages", (string)null);
+                    b.ToTable("strategy_models", (string)null);
                 });
 
             modelBuilder.Entity("Server.Models.UserInformation", b =>

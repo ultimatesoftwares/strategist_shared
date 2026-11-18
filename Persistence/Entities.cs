@@ -299,75 +299,56 @@ namespace Server.Models
     }
 
     /// <summary>
-    /// Immutable quant strategy package (table <c>strategy_packages</c>, quant
-    /// platform M1 / G1 report D9). A row is written only after the native core
-    /// validated the uploaded .sgpkg archive; the primary key IS the sha256 of
-    /// the archive bytes (lowercase hex) — a changed byte is a new package, and
-    /// there is no mutable "latest" pointer. The archive bytes live in the
-    /// content-addressed IPackageStore at <see cref="StoragePath"/>; this row
-    /// carries the manifest (jsonb) and the promotion state.
+    /// Registered ONNX strategy model (table <c>strategy_models</c>): the
+    /// artifact a strategy project trains and uploads (or a pre-built .onnx
+    /// uploaded directly). The primary key IS the sha256 of the model bytes
+    /// (lowercase hex) — re-uploading the same bytes is idempotent, a changed
+    /// byte is a new model, and there is no mutable "latest" pointer. The
+    /// bytes live under the server's models dir at <see cref="StoragePath"/>;
+    /// the row is the catalog entry.
     /// </summary>
-    public class StrategyPackage
+    public class StrategyModel
     {
-        /// <summary>sha256 of the archive bytes, lowercase hex (the package id).</summary>
+        /// <summary>sha256 of the model bytes, lowercase hex (the model id).</summary>
         [Key]
         [MaxLength(64)]
         public string Id { get; set; } = "";
 
-        /// <summary>Manifest name ([a-z0-9][a-z0-9-_]{0,63}).</summary>
+        /// <summary>Display name ([a-z0-9][a-z0-9-_]{0,63}); defaults to the
+        /// uploaded filename's stem.</summary>
         [MaxLength(100)]
         public string Name { get; set; } = "";
 
-        [MaxLength(128)] public string Author { get; set; } = "";
         [MaxLength(2048)] public string Description { get; set; } = "";
 
-        /// <summary>The validated manifest.json document (jsonb).</summary>
-        public string ManifestJson { get; set; } = "{}";
+        /// <summary>Account name of the uploader.</summary>
+        [MaxLength(256)]
+        public string UploadedBy { get; set; } = "";
 
-        /// <summary>Promotion state: "validated" (upload accepted) →
-        /// "backtested" → "paper" → "live" (M6 promotion gates). Only
-        /// still-"validated" packages may be deleted.</summary>
-        [MaxLength(20)]
-        public string Status { get; set; } = "validated";
-
-        /// <summary>Promotion audit trail (jsonb): JSON array of
-        /// {stage, at, by, note} appended on every stage advance (M6, D9).</summary>
-        public string PromotionHistory { get; set; } = "[]";
-
-        /// <summary>Archive size in bytes (upload cap: 32 MiB).</summary>
+        /// <summary>Model size in bytes.</summary>
         public long SizeBytes { get; set; }
 
-        /// <summary>Where the IPackageStore put the archive blob.</summary>
+        /// <summary>Where the model blob lives under the models dir.</summary>
         [MaxLength(300)]
         public string StoragePath { get; set; } = "";
-
-        /// <summary>strategist-core CORE_VERSION that validated the package.</summary>
-        [MaxLength(50)]
-        public string CoreVersion { get; set; } = "";
 
         public DateTime CreatedAtUtc { get; set; }
     }
 
     /// <summary>
-    /// Persistent package-backtest result (table <c>backtest_results</c>, quant
-    /// platform M4 / G1 report D9 — keyed by the bus job id directly per the M4
-    /// design freeze). The row is
-    /// created on submission (Status "queued") and the PackageBacktestJobMessage
-    /// is sent to the slave's durable "backtest.jobs" queue at the same time; the
-    /// slave's PackageBacktestStateMessage frames are mirrored back onto the row.
+    /// Persistent backtest result (table <c>backtest_results</c>): the research
+    /// engine's job mirror — rows are upserted by its BacktestResultMirror as
+    /// jobs progress so the dashboard/server can list engine runs. The disk
+    /// journal stays the engine's own source of truth for restart replay.
     /// Not keyed by <see cref="BaseEntity"/> (string pk), so writers stamp
     /// CreatedAt/UpdatedAt themselves.
     /// </summary>
     public class BacktestResult
     {
-        /// <summary>Job id the bus and the GUI key on ("pbt-{hex}").</summary>
+        /// <summary>Job id the GUI keys on.</summary>
         [Key]
         [MaxLength(200)]
         public string Id { get; set; } = "";
-
-        /// <summary>Content hash of the replayed package (strategy_packages.Id).</summary>
-        [MaxLength(64)]
-        public string PackageId { get; set; } = "";
 
         /// <summary>"queued" | "running" | "completed" | "failed" | "cancelled".</summary>
         [MaxLength(20)]
@@ -377,13 +358,13 @@ namespace Server.Models
         public long Bars { get; set; }
 
         /// <summary>Cooperative cancel flag: set via the API, relayed to the
-        /// slave over the bus-wide cancel publish.</summary>
+        /// research engine.</summary>
         public bool CancelRequested { get; set; }
 
         [MaxLength(1024)] public string? Error { get; set; }
 
-        // ── the requested replay window/config, as sent on the job message ──
-        /// <summary>Bar timeframe; empty = "use the manifest's timeframe".</summary>
+        // ── the requested replay window/config, as sent on the job ──
+        /// <summary>Bar timeframe; empty = the job's default.</summary>
         [MaxLength(10)]
         public string Timeframe { get; set; } = "";
 
@@ -409,7 +390,7 @@ namespace Server.Models
         /// <summary>The core's full capped report (jsonb, backtest-report/1).</summary>
         public string? ReportJson { get; set; }
 
-        /// <summary>Slave-reported start of the replay (first frame).</summary>
+        /// <summary>Engine-reported start of the replay (first frame).</summary>
         public DateTime? StartedAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
@@ -420,12 +401,11 @@ namespace Server.Models
     /// <summary>
     /// Persistent market-data provisioning job (table <c>provision_jobs</c> —
     /// the provisioning counterpart of <see cref="BacktestResult"/>): the row
-    /// is created when the job is queued to the fleet hub's durable data-jobs
-    /// queue and the hub's ProvisionStateMessage frames are mirrored back onto
-    /// it, so jobs survive server restarts. Finished rows prune from the
-    /// listing an hour after <see cref="StartedAt"/>. Not keyed by
-    /// <see cref="BaseEntity"/> (the id rides the bus), so writers stamp the
-    /// timestamps themselves.
+    /// is created when the fetch job is queued and the research engine's
+    /// progress frames are mirrored back onto it, so jobs survive restarts.
+    /// Finished rows prune from the listing an hour after
+    /// <see cref="StartedAt"/>. Not keyed by <see cref="BaseEntity"/>
+    /// (string job id), so writers stamp the timestamps themselves.
     /// </summary>
     public class ProvisionJob
     {
@@ -611,10 +591,10 @@ namespace Server.Models
 
         public ApplicationUser? LinkedBy { get; set; }
 
-        /// <summary>StrategyPackage.Id (content hash, string pk — no FK so links
+        /// <summary>StrategyModel.Id (content hash, string pk — no FK so links
         /// survive registry re-uploads; consumers resolve lazily).</summary>
         [MaxLength(200)]
-        public string PackageId { get; set; } = "";
+        public string ModelId { get; set; } = "";
 
         /// <summary>"research" | "development" | "approved".</summary>
         [MaxLength(20)]
