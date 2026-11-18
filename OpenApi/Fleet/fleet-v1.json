@@ -2,7 +2,7 @@
   "openapi": "3.0.4",
   "info": {
     "title": "Fleet Control Plane",
-    "description": "REST API of fleetd: manage MetaTrader terminal instances (provision, start, stop, delete), terminal templates and the VNC remote-desktop display. Terminals connect directly to the configured engine (Fleet:EngineAddress).",
+    "description": "REST API of fleet: manage MetaTrader terminals as Docker containers (create, start, stop, restart, delete, logs) built from the terminals image. Terminals connect directly to the configured engine (Fleet:EngineAddress).",
     "version": "v1"
   },
   "paths": {
@@ -12,7 +12,7 @@
           "Terminals"
         ],
         "summary": "List all terminals",
-        "description": "Managed terminals; each entry merges config and process state.",
+        "description": "Managed terminals; each entry merges the stored config and the live container state.",
         "operationId": "list_terminals",
         "responses": {
           "200": {
@@ -35,7 +35,7 @@
           "Terminals"
         ],
         "summary": "Create a terminal",
-        "description": "Registers the terminal and (unless provision=false) starts provisioning it in the background by copying the platform template (building the template first if needed), returning 202 Accepted. Poll GET /terminals/{id} until process.state leaves Provisioning. Default launch command is wine <home>/terminal(64).exe /portable. With provision=false the terminal is registration-only and 201 is returned.",
+        "description": "Registers the terminal and creates its Docker container from the terminals image (Fleet:TerminalImage) with the credentials injected as environment. start=true (or autoStart) also starts it. MetaTrader state persists on a named volume, so later container recreations lose nothing.",
         "operationId": "create_terminal",
         "requestBody": {
           "content": {
@@ -50,16 +50,6 @@
         "responses": {
           "201": {
             "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TerminalView"
-                }
-              }
-            }
-          },
-          "202": {
-            "description": "Accepted",
             "content": {
               "application/json": {
                 "schema": {
@@ -87,6 +77,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -97,7 +97,7 @@
           "Terminals"
         ],
         "summary": "Get one terminal",
-        "description": "process.state is Provisioning/ProvisionFailed while the home directory extraction runs or after it failed.",
+        "description": "container.state is Missing until the container has been created; container.staleConfig flags a container older than the stored config (restart to apply).",
         "operationId": "get_terminal",
         "parameters": [
           {
@@ -137,7 +137,7 @@
           "Terminals"
         ],
         "summary": "Update a terminal's config",
-        "description": "Platform and home directory are immutable; changes apply on next start.",
+        "description": "Platform is immutable. An existing container keeps running with its old config (container.staleConfig=true); restart the terminal to recreate it with the new one.",
         "operationId": "update_terminal",
         "parameters": [
           {
@@ -170,6 +170,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
             "content": {
@@ -187,7 +197,7 @@
           "Terminals"
         ],
         "summary": "Delete a terminal",
-        "description": "Removes the config and the provisioned home directory. Refuses while the process runs or provisioning is active unless ?force=true, which stops/cancels first.",
+        "description": "Removes the config, the container and (unless ?keepData=true) the MetaTrader state volume. Refuses while the container runs unless ?force=true.",
         "operationId": "delete_terminal",
         "parameters": [
           {
@@ -200,6 +210,13 @@
           },
           {
             "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "keepData",
             "in": "query",
             "schema": {
               "type": "boolean"
@@ -230,60 +247,8 @@
               }
             }
           },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/terminals/{id}/provision": {
-      "post": {
-        "tags": [
-          "Terminals"
-        ],
-        "summary": "(Re-)provision the home directory",
-        "description": "Retries provisioning after a ProvisionFailed, or provisions a terminal created with provision=false. Returns 202 Accepted; poll GET /terminals/{id}.",
-        "operationId": "provision_terminal",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TerminalView"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
+          "502": {
+            "description": "Bad Gateway",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -300,7 +265,8 @@
         "tags": [
           "Terminals"
         ],
-        "summary": "Start the terminal process",
+        "summary": "Start the terminal container",
+        "description": "Creates the container first when missing or stale (config changed while stopped), then starts it.",
         "operationId": "start_terminal",
         "parameters": [
           {
@@ -333,8 +299,8 @@
               }
             }
           },
-          "409": {
-            "description": "Conflict",
+          "502": {
+            "description": "Bad Gateway",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -351,8 +317,8 @@
         "tags": [
           "Terminals"
         ],
-        "summary": "Stop the terminal process",
-        "description": "SIGTERM, then a process-tree kill after the grace period.",
+        "summary": "Stop the terminal container",
+        "description": "docker stop: SIGTERM, then SIGKILL after Fleet:StopGraceSeconds.",
         "operationId": "stop_terminal",
         "parameters": [
           {
@@ -394,6 +360,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -403,7 +379,8 @@
         "tags": [
           "Terminals"
         ],
-        "summary": "Restart the terminal process",
+        "summary": "Restart the terminal container",
+        "description": "Stops the container and recreates it from the current config when it is stale, so this is also how config updates are applied.",
         "operationId": "restart_terminal",
         "parameters": [
           {
@@ -436,8 +413,8 @@
               }
             }
           },
-          "409": {
-            "description": "Conflict",
+          "502": {
+            "description": "Bad Gateway",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -449,97 +426,42 @@
         }
       }
     },
-    "/api/v1/templates": {
+    "/api/v1/terminals/{id}/logs": {
       "get": {
         "tags": [
-          "Templates"
+          "Terminals"
         ],
-        "summary": "Terminal template status",
-        "description": "One entry per platform: whether a template is built, an active build, and the last build error.",
-        "operationId": "list_templates",
+        "summary": "Tail the terminal container's logs",
+        "description": "Last ?tail= lines (default 200, max 5000) of the container's stdout/stderr: Xvfb/x11vnc/wine startup and the entrypoint's provisioning output.",
+        "operationId": "terminal_logs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tail",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TemplateStatus"
-                  }
+                  "$ref": "#/components/schemas/TerminalLogsView"
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/templates/{platform}": {
-      "post": {
-        "tags": [
-          "Templates"
-        ],
-        "summary": "Build a terminal template",
-        "description": "Downloads the official MetaQuotes installer, silent-installs it under a scratch wineprefix, and publishes the tree to DataDir/templates/{platform} with the connector overlay applied. Returns 202; poll GET /templates. Terminal creation also triggers this automatically when no template exists.",
-        "operationId": "build_template",
-        "parameters": [
-          {
-            "name": "platform",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^(mt4|mt5)$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TemplateStatus"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Templates"
-        ],
-        "summary": "Delete a terminal template",
-        "description": "Removes the built template; existing terminals are unaffected. The next build downloads a fresh installer.",
-        "operationId": "delete_template",
-        "parameters": [
-          {
-            "name": "platform",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^(mt4|mt5)$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
@@ -551,8 +473,8 @@
               }
             }
           },
-          "409": {
-            "description": "Conflict",
+          "502": {
+            "description": "Bad Gateway",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -564,21 +486,31 @@
         }
       }
     },
-    "/api/v1/vnc/status": {
+    "/api/v1/image": {
       "get": {
         "tags": [
-          "Vnc"
+          "Image"
         ],
-        "summary": "VNC unit status",
-        "description": "systemctl is-active for the VNC unit (default: fleet-vnc) plus the current listen state. State is \"unknown\" when systemctl is unavailable.",
-        "operationId": "vnc_status",
+        "summary": "Terminal image status",
+        "description": "Whether Fleet:TerminalImage is present on the Docker daemon.",
+        "operationId": "image_status",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VncStatusView"
+                  "$ref": "#/components/schemas/ImageStatus"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -586,32 +518,21 @@
         }
       }
     },
-    "/api/v1/vnc/{verb}": {
+    "/api/v1/image/pull": {
       "post": {
         "tags": [
-          "Vnc"
+          "Image"
         ],
-        "summary": "Start/stop/restart the VNC display",
-        "description": "Runs systemctl <verb> on the VNC unit (Fleet:VncUnit, default fleet-vnc: a persistent Xvnc that managed terminals render into via injected DISPLAY) and returns the listen endpoint (display, port, connectable host IPs) plus the credentials: Fleet:VncPassword when set, otherwise a password generated per start/restart and written to the Xvnc auth file (Fleet:VncPasswdFile under DataDir - no privileged helper needed). fleetd's user needs a polkit rule or sudo wrapper (Fleet:SystemctlBinary) for the systemctl call to succeed.",
-        "operationId": "vnc_control",
-        "parameters": [
-          {
-            "name": "verb",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^(start|stop|restart)$",
-              "type": "string"
-            }
-          }
-        ],
+        "summary": "Pull the terminal image",
+        "description": "Pulls Fleet:TerminalImage from its registry. Running containers keep their image; restart a terminal to recreate it from the new one (its state volume is preserved).",
+        "operationId": "pull_image",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VncControlView"
+                  "$ref": "#/components/schemas/ImageStatus"
                 }
               }
             }
@@ -632,17 +553,64 @@
   },
   "components": {
     "schemas": {
+      "ContainerStatus": {
+        "required": [
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/TerminalState"
+          },
+          "containerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "vncHostPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "startedAtUnixMs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "exitCode": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "exitedAtUnixMs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "staleConfig": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "CreateTerminalRequest": {
         "required": [
           "id",
           "name",
           "platform",
-          "provision",
-          "command",
-          "args",
-          "workingDir",
+          "login",
+          "password",
+          "server",
+          "vncHostPort",
           "environment",
-          "autoStart"
+          "autoStart",
+          "start"
         ],
         "type": "object",
         "properties": {
@@ -658,23 +626,21 @@
             "type": "string",
             "nullable": true
           },
-          "provision": {
-            "type": "boolean",
-            "nullable": true
-          },
-          "command": {
+          "login": {
             "type": "string",
             "nullable": true
           },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
+          "password": {
+            "type": "string",
             "nullable": true
           },
-          "workingDir": {
+          "server": {
             "type": "string",
+            "nullable": true
+          },
+          "vncHostPort": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "environment": {
@@ -687,33 +653,36 @@
           "autoStart": {
             "type": "boolean",
             "nullable": true
+          },
+          "start": {
+            "type": "boolean",
+            "nullable": true
           }
         }
       },
-      "ListenInfo": {
+      "ImageStatus": {
         "required": [
-          "display",
-          "port",
-          "listening",
-          "hostAddresses"
+          "name",
+          "present",
+          "id",
+          "createdAtUnixMs"
         ],
         "type": "object",
         "properties": {
-          "display": {
+          "name": {
             "type": "string"
           },
-          "port": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "listening": {
+          "present": {
             "type": "boolean"
           },
-          "hostAddresses": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAtUnixMs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
           }
         }
       },
@@ -743,86 +712,43 @@
           }
         }
       },
-      "ProcessState": {
+      "TerminalLogsView": {
+        "required": [
+          "stdout",
+          "stderr"
+        ],
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          }
+        }
+      },
+      "TerminalState": {
         "enum": [
-          "Provisioning",
-          "ProvisionFailed",
-          "Stopped",
+          "Missing",
+          "Created",
           "Running",
-          "Exited"
+          "Restarting",
+          "Paused",
+          "Exited",
+          "Dead"
         ]
       },
-      "ProcessStatus": {
+      "TerminalView": {
         "required": [
-          "state"
-        ],
-        "type": "object",
-        "properties": {
-          "state": {
-            "$ref": "#/components/schemas/ProcessState"
-          },
-          "pid": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "startedAtUnixMs": {
-            "type": "integer",
-            "format": "int64",
-            "nullable": true
-          },
-          "exitCode": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "exitedAtUnixMs": {
-            "type": "integer",
-            "format": "int64",
-            "nullable": true
-          },
-          "error": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "TemplateStatus": {
-        "required": [
+          "id",
+          "name",
           "platform",
-          "exists",
-          "path",
-          "building",
-          "lastError",
-          "installerUrl"
-        ],
-        "type": "object",
-        "properties": {
-          "platform": {
-            "type": "string"
-          },
-          "exists": {
-            "type": "boolean"
-          },
-          "path": {
-            "type": "string",
-            "nullable": true
-          },
-          "building": {
-            "type": "boolean"
-          },
-          "lastError": {
-            "type": "string",
-            "nullable": true
-          },
-          "installerUrl": {
-            "type": "string"
-          }
-        }
-      },
-      "TerminalConfig": {
-        "required": [
-          "id"
+          "login",
+          "server",
+          "vncHostPort",
+          "environment",
+          "autoStart",
+          "container"
         ],
         "type": "object",
         "properties": {
@@ -835,20 +761,15 @@
           "platform": {
             "type": "string"
           },
-          "homeDir": {
+          "login": {
             "type": "string"
           },
-          "command": {
+          "server": {
             "type": "string"
           },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "workingDir": {
-            "type": "string"
+          "vncHostPort": {
+            "type": "integer",
+            "format": "int32"
           },
           "environment": {
             "type": "object",
@@ -858,63 +779,19 @@
           },
           "autoStart": {
             "type": "boolean"
-          }
-        }
-      },
-      "TerminalView": {
-        "required": [
-          "id",
-          "config",
-          "process"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
           },
-          "config": {
-            "oneOf": [
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              },
-              {
-                "$ref": "#/components/schemas/TerminalConfig"
-              }
-            ]
-          },
-          "process": {
-            "$ref": "#/components/schemas/ProcessStatus"
-          }
-        }
-      },
-      "UnitStatus": {
-        "required": [
-          "unit",
-          "state",
-          "active"
-        ],
-        "type": "object",
-        "properties": {
-          "unit": {
-            "type": "string"
-          },
-          "state": {
-            "type": "string"
-          },
-          "active": {
-            "type": "boolean"
+          "container": {
+            "$ref": "#/components/schemas/ContainerStatus"
           }
         }
       },
       "UpdateTerminalRequest": {
         "required": [
           "name",
-          "command",
-          "args",
-          "workingDir",
+          "login",
+          "password",
+          "server",
+          "vncHostPort",
           "environment",
           "autoStart"
         ],
@@ -924,19 +801,21 @@
             "type": "string",
             "nullable": true
           },
-          "command": {
+          "login": {
             "type": "string",
             "nullable": true
           },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
+          "password": {
+            "type": "string",
             "nullable": true
           },
-          "workingDir": {
+          "server": {
             "type": "string",
+            "nullable": true
+          },
+          "vncHostPort": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "environment": {
@@ -949,82 +828,6 @@
           "autoStart": {
             "type": "boolean",
             "nullable": true
-          }
-        }
-      },
-      "VncControlView": {
-        "required": [
-          "ok",
-          "detail",
-          "listen",
-          "credentials"
-        ],
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "detail": {
-            "type": "string"
-          },
-          "listen": {
-            "$ref": "#/components/schemas/ListenInfo"
-          },
-          "credentials": {
-            "oneOf": [
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              },
-              {
-                "$ref": "#/components/schemas/VncCredentials"
-              }
-            ]
-          }
-        }
-      },
-      "VncCredentials": {
-        "required": [
-          "password",
-          "generated",
-          "passwdFile",
-          "error"
-        ],
-        "type": "object",
-        "properties": {
-          "password": {
-            "type": "string",
-            "nullable": true
-          },
-          "generated": {
-            "type": "boolean"
-          },
-          "passwdFile": {
-            "type": "string"
-          },
-          "error": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "VncStatusView": {
-        "required": [
-          "units",
-          "listen"
-        ],
-        "type": "object",
-        "properties": {
-          "units": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UnitStatus"
-            }
-          },
-          "listen": {
-            "$ref": "#/components/schemas/ListenInfo"
           }
         }
       }
@@ -1044,13 +847,10 @@
   ],
   "tags": [
     {
-      "name": "Templates"
+      "name": "Image"
     },
     {
       "name": "Terminals"
-    },
-    {
-      "name": "Vnc"
     }
   ]
 }
