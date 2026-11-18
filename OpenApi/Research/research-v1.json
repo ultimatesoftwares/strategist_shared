@@ -233,6 +233,440 @@
           }
         }
       }
+    },
+    "/api/history": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "All fetch jobs, newest first (completed manifests + live jobs).",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Queue a history fetch for a registered instrument (its symbol is\nresolved from the platform database) or an explicit source symbol.\nsource may be omitted when exactly one history source is registered.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHistoryFetchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/history/sources": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Venue tags of the registered history sources.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/history/{id}": {
+      "get": {
+        "tags": [
+          "History"
+        ],
+        "summary": "One fetch job by id.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "History"
+        ],
+        "summary": "Cancel the job if still running, then delete its manifest.\n    Ticks already written stay in QuestDB (the store is shared/dedup'd).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "List registered instruments; filter with ?q= (symbol/description) and ?assetClass=.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetClass",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Instrument signup: register a canonical instrument manually.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstrumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/signup": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Instrument signup from a venue catalog entry: registers the\n    canonical instrument and maps the entry to it.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/{id}": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "One instrument with its mapped venue listings.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Update registry fields; only the provided fields change.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Delete an instrument (catalog mappings revert to unmapped via SetNull).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/catalog": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Venue catalog entries; filter with ?accountKey=, ?q=,\n    ?unmapped=true or ?mapped=true. Page with ?limit= and ?offset= — the response is a\n    plain array, so walk offsets until a short page. Full per-account\n    counts live on catalog/accounts.",
+        "parameters": [
+          {
+            "name": "accountKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unmapped",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "mapped",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 500
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/catalog/accounts": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "The venue accounts with a synced catalog: entry counts and last sync.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/catalog/{entryId}/map": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Map a catalog entry to a registered instrument.",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCatalogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/catalog/{entryId}/unmap": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Clear a catalog entry's instrument mapping.",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -458,6 +892,18 @@
         },
         "description": "Union of the possible analysis outputs; exactly one section is populated."
       },
+      "CatalogSignupRequest": {
+        "required": [
+          "catalogEntryId"
+        ],
+        "type": "object",
+        "properties": {
+          "catalogEntryId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CostSpec": {
         "type": "object",
         "properties": {
@@ -493,6 +939,94 @@
           }
         },
         "description": "Execution cost assumptions, all in fixed-point engine units (default: frictionless)."
+      },
+      "CreateHistoryFetchRequest": {
+        "required": [
+          "fromUtc",
+          "toUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "fromUtc": {
+            "type": "string",
+            "description": "Window start (inclusive, UTC).",
+            "format": "date-time"
+          },
+          "toUtc": {
+            "type": "string",
+            "description": "Window end (exclusive, UTC).",
+            "format": "date-time"
+          },
+          "instrumentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Registered instrument; its symbol is used when\n    Symbol is omitted (needs the platform database).",
+            "format": "uuid"
+          },
+          "symbol": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Symbol to request from the source."
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "History source tag (GET /api/history/sources);\n    optional when exactly one is registered."
+          }
+        },
+        "description": "Queue a historical tick fetch into QuestDB (POST /api/history)."
+      },
+      "CreateInstrumentRequest": {
+        "required": [
+          "symbol",
+          "assetClass"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "assetClass": {
+            "type": "string"
+          },
+          "baseCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quoteCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradable": {
+            "type": "boolean",
+            "default": true
+          }
+        }
       },
       "Distribution": {
         "required": [
@@ -662,6 +1196,18 @@
           }
         },
         "description": "Parameter grid: cross product of thresholds × quantities (empty axis = base value)."
+      },
+      "MapCatalogRequest": {
+        "required": [
+          "instrumentId"
+        ],
+        "type": "object",
+        "properties": {
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "MonteCarloMethod": {
         "type": "integer"
@@ -1532,6 +2078,56 @@
         },
         "description": "Parameter sweep configuration (in-sample grid search over the whole file)."
       },
+      "UpdateInstrumentRequest": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assetClass": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baseCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quoteCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tradable": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "WalkForwardResult": {
         "required": [
           "folds",
@@ -1759,6 +2355,12 @@
   "tags": [
     {
       "name": "Backtests"
+    },
+    {
+      "name": "History"
+    },
+    {
+      "name": "Instruments"
     }
   ]
 }
