@@ -2020,7 +2020,7 @@
               "integer",
               "string"
             ],
-            "description": "Quoter entry / onnx signal threshold in bps (0 = strategy default).",
+            "description": "Quoter entry / onnx P(up) entry threshold in bps (0 = strategy default).",
             "format": "int64",
             "default": 0
           },
@@ -2032,6 +2032,26 @@
             ],
             "description": "Order size in lots (0 = strategy default).",
             "format": "uint64",
+            "default": 0
+          },
+          "exitThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Onnx P(up) exit threshold in bps (0 = strategy default).",
+            "format": "int64",
+            "default": 0
+          },
+          "maxHoldBars": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Onnx maximum holding time in closed bars (0 = strategy default).",
+            "format": "int64",
             "default": 0
           }
         },
