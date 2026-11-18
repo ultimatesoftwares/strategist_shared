@@ -2,25 +2,26 @@ using Strategist.TimeSeries;
 
 namespace Strategist.Infrastructure.TimeSeries;
 
-// Venue-backed fetching: pull history from a registered broker source
-// (ctrader, metatrader, alpaca) into the store.
+// Source-backed fetching: pull history from a registered source (a broker
+// venue such as ctrader/metatrader/alpaca, or a data vendor) into the store.
 public sealed partial class QuestDb
 {
-    /// <summary>Venues that can back the historical store.</summary>
+    /// <summary>Well-known broker venues that can back the historical store.
+    /// Not exhaustive: any registered source (e.g. a data vendor) is accepted.</summary>
     public static readonly IReadOnlyList<string> FetchVenues =
         ["ctrader", "metatrader", "alpaca"];
 
-    /// <summary>Registers the host's history source for one of
-    /// <see cref="FetchVenues"/>.</summary>
+    /// <summary>Registers a history source under its <see cref="IVenueHistorySource.Venue"/>
+    /// tag (the `venue` column its ticks are written with).</summary>
     public void RegisterSource(IVenueHistorySource source)
     {
-        if (!FetchVenues.Contains(source.Venue, StringComparer.OrdinalIgnoreCase))
-            throw new ArgumentException(
-                $"'{source.Venue}' cannot back the historical store — supported venues: " +
-                $"{string.Join(", ", FetchVenues)}.",
-                nameof(source));
+        if (string.IsNullOrWhiteSpace(source.Venue))
+            throw new ArgumentException("a history source needs a non-empty venue tag", nameof(source));
         _sources[source.Venue] = source;
     }
+
+    /// <summary>Venue tags of the registered history sources.</summary>
+    public IReadOnlyCollection<string> RegisteredSources => _sources.Keys.ToList();
 
     /// <summary>
     /// Fetches bars from a venue ("ctrader", "metatrader" or "alpaca")
@@ -112,9 +113,6 @@ public sealed partial class QuestDb
 
     private IVenueHistorySource Source(string venue)
     {
-        if (!FetchVenues.Contains(venue, StringComparer.OrdinalIgnoreCase))
-            throw new ArgumentException(
-                $"unknown venue '{venue}' — supported: {string.Join(", ", FetchVenues)}.", nameof(venue));
         return _sources.TryGetValue(venue, out var source)
             ? source
             : throw new InvalidOperationException(
