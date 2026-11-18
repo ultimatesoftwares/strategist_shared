@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "strategist_bot research API",
-    "description": "Run deterministic backtests through the Rust engine: single runs with a full performance report (Sharpe, Sortino, drawdown, trade stats, VaR), Monte Carlo robustness analysis (bootstrap/permutation of trade PnLs), walk-forward analysis (in-sample grid optimization, out-of-sample validation), and parallel parameter sweeps. Execution costs (commission, taker slippage) are configurable per job. Jobs run in-process; poll until Completed or Failed.",
+    "description": "Run deterministic backtests through the trading engine: single runs with a full performance report (Sharpe, Sortino, drawdown, trade stats, VaR), Monte Carlo robustness analysis (bootstrap/permutation of trade PnLs), walk-forward analysis (in-sample grid optimization, out-of-sample validation), and parallel parameter sweeps. Execution costs (commission, taker slippage) are configurable per job. Jobs run in-process; poll until Completed or Failed.",
     "version": "v1"
   },
   "paths": {
