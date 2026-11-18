@@ -1,0 +1,119 @@
+namespace Trading.Core;
+
+public enum Side : uint
+{
+    Buy = 0,
+    Sell = 1,
+}
+
+public enum OrderStatus : uint
+{
+    Accepted = 0,
+    PartiallyFilled = 1,
+    Filled = 2,
+    Cancelled = 3,
+    Rejected = 4,
+}
+
+/// <summary>An L2 book delta. Qty of 0 removes the price level.</summary>
+public readonly record struct BookUpdate(
+    uint SymbolId, Side Side, long Price, ulong Qty, ulong TsNanos);
+
+/// <summary>A top-of-book quote tick (MT-style bid/ask). Qty of 0 = size unknown.</summary>
+public readonly record struct QuoteTick(
+    uint SymbolId, long Bid, long Ask, ulong BidQty, ulong AskQty, ulong TsNanos);
+
+/// <summary>
+/// A closed OHLC bar. <see cref="TimeUnixMs"/> is the bar's OPEN time in Unix
+/// milliseconds (the MetaTrader convention); prices are fixed-point scaled
+/// integers like everything else on the engine boundary.
+/// </summary>
+public readonly record struct Bar(
+    uint SymbolId, long TimeUnixMs, long Open, long High, long Low, long Close, ulong Volume);
+
+/// <summary>Execution feedback from a broker, fed back into the engine.</summary>
+public readonly record struct ExecutionReport(
+    ulong OrderId, uint SymbolId, OrderStatus Status, Side Side,
+    long FillPrice, ulong FillQty, ulong LeavesQty, ulong TsNanos);
+
+/// <summary>A command emitted by the engine for the broker to execute.</summary>
+public abstract record OrderCommand(ulong OrderId, uint SymbolId)
+{
+    public sealed record Place(ulong OrderId, uint SymbolId, Side Side, long Price, ulong Qty)
+        : OrderCommand(OrderId, SymbolId);
+
+    public sealed record Cancel(ulong OrderId, uint SymbolId)
+        : OrderCommand(OrderId, SymbolId);
+}
+
+public readonly record struct RiskLimits(long MaxPosition, ulong MaxOrderQty, ulong MaxOpenOrders)
+{
+    public static RiskLimits Default => new(MaxPosition: 100, MaxOrderQty: 10, MaxOpenOrders: 4);
+}
+
+public enum StrategyKind : uint
+{
+    /// <summary>The built-in demo market maker (see Engine/Strategy.cs).</summary>
+    ImbalanceQuoter = 0,
+    /// <summary>Never trades; the engine only maintains book/position state.</summary>
+    Null = 1,
+    /// <summary>ONNX model-driven bar strategy (see Engine/OnnxStrategy.cs for the model contract).</summary>
+    Onnx = 2,
+}
+
+/// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
+/// <remarks>
+/// <see cref="EntryThresholdBps"/> is the ImbalanceQuoter entry threshold, or
+/// for <see cref="StrategyKind.Onnx"/> the P(up) entry threshold in bps of
+/// probability (6000 = 0.60; default). <see cref="ExitThresholdBps"/> and
+/// <see cref="MaxHoldBars"/> apply to Onnx only: the P(up) exit threshold
+/// (default 5000 = 0.50) and the maximum holding time in closed bars
+/// (default 5). <see cref="ModelPath"/> is required for Onnx and ignored
+/// otherwise.
+/// </remarks>
+public readonly record struct StrategyConfig(
+    StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
+    long ExitThresholdBps = 0, long MaxHoldBars = 0)
+{
+    public static StrategyConfig Default => new(StrategyKind.ImbalanceQuoter);
+
+    /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+    public string Describe() => Kind switch
+    {
+        StrategyKind.Onnx => $"onnx:{ModelPath}",
+        StrategyKind.Null => "null",
+        _ => "imbalance_quoter",
+    };
+}
+
+public readonly record struct TopOfBook(long BidPrice, ulong BidQty, long AskPrice, ulong AskQty);
+
+/// <summary>Lifecycle state of a strategy's signal (mirrors engine-core's DecisionStatus).</summary>
+public enum DecisionStatus : uint
+{
+    /// <summary>Still accumulating history; no trading signal yet.</summary>
+    Warmup = 0,
+    /// <summary>Signal computed normally.</summary>
+    Active = 1,
+    /// <summary>Strategy is impaired (e.g. model inference failed) and quoting defensively.</summary>
+    Degraded = 2,
+}
+
+/// <summary>
+/// The strategy's signal snapshot behind its most recent book evaluation.
+/// Forecast is a dimensionless signal (NaN when none was computed, e.g.
+/// during warm-up or degradation).
+/// </summary>
+public readonly record struct StrategyDecision(double Forecast, DecisionStatus Status)
+{
+    /// <summary>Journal string for <see cref="Status"/>: "warmup" | "active" | "degraded".</summary>
+    public string StatusString => Status switch
+    {
+        DecisionStatus.Active => "active",
+        DecisionStatus.Degraded => "degraded",
+        _ => "warmup",
+    };
+}
+
+/// <summary>One aggregated L2 price level (price in the adapter's fixed-point scale).</summary>
+public readonly record struct BookLevel(long Price, ulong Qty);

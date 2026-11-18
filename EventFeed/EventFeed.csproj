@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Grpc.AspNetCore service bases need the ASP.NET Core shared framework
+       even from a class library. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The push-feed contracts live in the shared submodule (platform-owned
+       schemas), one per service: the bot's serverevents.EngineStateFeed and
+       the backtest API's backtestevents.BacktestFeed — both subject + JSON +
+       timestamp, replay-latest-then-live. -->
+  <ItemGroup>
+    <Protobuf Include="..\Protos\bot\v1\bot_events.proto" ProtoRoot="..\Protos" GrpcServices="Server" />
+    <Protobuf Include="..\Protos\backtest\v1\backtest_events.proto" ProtoRoot="..\Protos" GrpcServices="Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+  </ItemGroup>
+
+</Project>
