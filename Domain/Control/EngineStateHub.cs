@@ -3,7 +3,7 @@ using System.Threading.Channels;
 
 namespace Engine.Control;
 
-/// <summary>Latest engine-state entry per subject with fan-out to gRPC
+/// <summary>Latest engine-state entry per subject with fan-out to feed
 /// subscribers — the in-process successor of the engine-state JetStream
 /// stream (MaxMsgsPerSubject=1 semantics).</summary>
 public sealed class EngineStateHub

@@ -1,15 +1,13 @@
 namespace Trading.Core.Engine;
 
 /// <summary>
-/// The model-driven bar strategy: an ONNX or ML.NET binary classifier over
+/// The model-driven bar strategy: an ML.NET binary classifier over
 /// close-to-close returns, with mt5-bot-style entry/exit rules.
 ///
-/// <para><b>Model contract</b>: the format is detected from the file
-/// (<see cref="ModelPredictor"/>). ONNX: see <see cref="OnnxPredictor"/> — one
-/// <c>f32[1, FeatureCount]</c> input of returns (newest first), outputs
-/// <c>label</c> (<c>i64[1]</c>) and <c>probabilities</c> (<c>f32[1, 2]</c>,
-/// <c>[P(down), P(up)]</c>). ML.NET <c>model.zip</c>: see
-/// <see cref="MlNetPredictor"/>.</para>
+/// <para><b>Model contract</b>: an ML.NET <c>model.zip</c> — see
+/// <see cref="MlNetPredictor"/>. The default input is a vector of
+/// close-to-close returns (newest first); named <see cref="BarFeatures"/>
+/// columns are also supported.</para>
 ///
 /// <para><b>Rules (per closed bar)</b>:</para>
 /// <list type="bullet">
@@ -41,7 +39,7 @@ namespace Trading.Core.Engine;
 /// loss. In this mode the entry threshold is the minimum edge in bps, the
 /// exit threshold is the stop loss in bps from the entry price.</para>
 /// </summary>
-public sealed class OnnxStrategy : IStrategy, IDisposable
+public sealed class MlStrategy : IStrategy, IDisposable
 {
     /// <summary>Default P(up) entry threshold in bps of probability (6000 = 0.60).</summary>
     public const long DefaultEntryThresholdBps = 6_000;
@@ -97,14 +95,14 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
     private readonly Dictionary<uint, SymbolState> _state = [];
     // Reused per bar: the engine is single-threaded by contract.
     private readonly float[] _features;
-    private readonly double[] _returns = new double[OnnxPredictor.FeatureCount];
+    private readonly double[] _returns = new double[ModelPredictor.ReturnCount];
     private readonly double[] _barFeatures = new double[BarFeatures.Names.Count];
 
     /// <summary>Set on inference failure: cancel everything, never trade again.</summary>
     private bool _poisoned;
     private StrategyDecision? _lastDecision;
 
-    private OnnxStrategy(
+    private MlStrategy(
         IModelPredictor predictor, ulong orderQty, float entryThreshold, float exitThreshold,
         long maxHoldBars, double minEdgeBps = 0, double stopBps = 0)
     {
@@ -124,13 +122,13 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
     public bool IsEdgeModel => _edge;
 
     /// <summary>Closed bars needed before the first prediction.</summary>
-    public int WarmupBars => _featureIndexes is null ? OnnxPredictor.FeatureCount + 1 : BarFeatures.Warmup + 1;
+    public int WarmupBars => _featureIndexes is null ? ModelPredictor.ReturnCount + 1 : BarFeatures.Warmup + 1;
 
     /// <summary>
     /// Load the model and build the strategy. 0 (or negative) parameters
     /// select the defaults; thresholds are bps of probability (6000 = 0.60).
     /// </summary>
-    public static OnnxStrategy FromFile(
+    public static MlStrategy FromFile(
         string path, ulong orderQty, long entryThresholdBps, long exitThresholdBps,
         long maxHoldBars)
     {
@@ -147,7 +145,7 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
 
         if (predictor.OutputKind == ModelOutputKind.Edge)
         {
-            return new OnnxStrategy(
+            return new MlStrategy(
                 predictor,
                 orderQty > 0 ? orderQty : 1,
                 0, 0,
@@ -162,10 +160,10 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
         {
             predictor.Dispose();
             throw new InvalidOperationException(
-                $"onnx thresholds must be within 1..=10000 bps (entry {entry}, exit {exit})");
+                $"ml thresholds must be within 1..=10000 bps (entry {entry}, exit {exit})");
         }
 
-        return new OnnxStrategy(
+        return new MlStrategy(
             predictor,
             orderQty > 0 ? orderQty : 1,
             entry / 10_000.0f,
@@ -376,14 +374,14 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
             }
         }
         state.Closes.Add((bar.TimeUnixMs, bar.Close));
-        if (state.Closes.Count > OnnxPredictor.FeatureCount + 1)
+        if (state.Closes.Count > ModelPredictor.ReturnCount + 1)
             state.Closes.RemoveAt(0);
-        if (state.Closes.Count < OnnxPredictor.FeatureCount + 1)
+        if (state.Closes.Count < ModelPredictor.ReturnCount + 1)
             return false;
 
-        for (var i = 0; i < OnnxPredictor.FeatureCount; i++)
+        for (var i = 0; i < ModelPredictor.ReturnCount; i++)
             _returns[i] = state.Closes[i + 1].Close / state.Closes[i].Close - 1.0;
-        return OnnxPredictor.TryFeaturesFromReturns(_returns, features);
+        return ModelPredictor.TryFeaturesFromReturns(_returns, features);
     }
 
     private bool UpdateFeatures(SymbolState state, in Bar bar, float[] features)

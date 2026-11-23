@@ -1,17 +1,17 @@
 namespace Trading.Core.Engine;
 
 /// <summary>Experimental classifier over five consecutive mid-price returns.</summary>
-public sealed class TickOnnxStrategy : IStrategy, IDisposable
+public sealed class TickMlStrategy : IStrategy, IDisposable
 {
     private sealed class Window
     {
-        public readonly double[] Mids = new double[OnnxPredictor.FeatureCount + 1];
+        public readonly double[] Mids = new double[ModelPredictor.ReturnCount + 1];
         public int Count;
     }
 
     private readonly IModelPredictor _predictor;
     private readonly Dictionary<uint, Window> _windows = [];
-    private readonly float[] _features = new float[OnnxPredictor.FeatureCount];
+    private readonly float[] _features = new float[ModelPredictor.ReturnCount];
     private readonly ulong _quantity;
     private readonly float _entry;
     private readonly float _exit;
@@ -22,9 +22,9 @@ public sealed class TickOnnxStrategy : IStrategy, IDisposable
     public long PredictionCount { get; private set; }
     public string? InferenceFailure { get; private set; }
 
-    public TickOnnxStrategy(IModelPredictor predictor, ulong quantity, long entryBps, long exitBps)
+    public TickMlStrategy(IModelPredictor predictor, ulong quantity, long entryBps, long exitBps)
     {
-        if (predictor.FeatureCount != OnnxPredictor.FeatureCount
+        if (predictor.FeatureCount != ModelPredictor.ReturnCount
             || predictor.FeatureIndexes is not null || predictor.OutputKind != ModelOutputKind.Probability)
             throw new InvalidOperationException("tick model must be a five-input probability classifier");
         if (quantity is 0 or > long.MaxValue || entryBps is <= 5000 or > 10000
@@ -36,14 +36,12 @@ public sealed class TickOnnxStrategy : IStrategy, IDisposable
         _exit = exitBps / 10_000f;
     }
 
-    public static TickOnnxStrategy FromFile(string path, ulong quantity, long entryBps, long exitBps)
+    public static TickMlStrategy FromFile(string path, ulong quantity, long entryBps, long exitBps)
     {
-        if (ModelPredictor.Detect(path) != ModelFormat.Onnx)
-            throw new InvalidOperationException("tickOnnx requires an ONNX classifier");
-        var predictor = OnnxPredictor.Load(path);
+        var predictor = ModelPredictor.Load(path);
         try
         {
-            return new TickOnnxStrategy(predictor, quantity == 0 ? 1 : quantity,
+            return new TickMlStrategy(predictor, quantity == 0 ? 1 : quantity,
                 entryBps == 0 ? 6000 : entryBps, exitBps == 0 ? 5000 : exitBps);
         }
         catch

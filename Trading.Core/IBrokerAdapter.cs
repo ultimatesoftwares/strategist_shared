@@ -49,7 +49,7 @@ public interface IExecutionAppliedObserver
 
 /// <summary>
 /// Optional broker capability: closed OHLC bars for subscribed symbols
-/// (feeding bar-driven strategies, e.g. <see cref="StrategyKind.Onnx"/>).
+/// (feeding bar-driven strategies, e.g. <see cref="StrategyKind.Ml"/>).
 /// Adapters without a native bar feed can aggregate bars from their tick
 /// stream. Raised on whatever thread the SDK uses — the host marshals onto
 /// the engine thread.

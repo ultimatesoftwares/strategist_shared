@@ -34,7 +34,7 @@ public sealed class TradingEngine : IDisposable
     /// <summary>
     /// Create the engine with the given limits and strategy. Throws
     /// <see cref="InvalidOperationException"/> when the strategy
-    /// configuration is invalid (unknown kind, missing/broken ONNX model,
+    /// configuration is invalid (unknown kind, missing/broken model,
     /// out-of-range thresholds).
     /// </summary>
     public TradingEngine(RiskLimits limits, StrategyConfig? strategy = null)

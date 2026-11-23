@@ -1176,6 +1176,39 @@
         }
       }
     },
+    "/api/venues/ctrader": {
+      "post": {
+        "tags": [
+          "Venues"
+        ],
+        "summary": "Capture a cTrader venue from its FIX API SenderCompID and\n    password; host, port, login and broker are derived.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCTraderVenueRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCTraderVenueRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCTraderVenueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/venues/ctrader/{id}": {
       "put": {
         "tags": [
@@ -1268,6 +1301,30 @@
   },
   "components": {
     "schemas": {
+      "CreateCTraderVenueRequest": {
+        "required": [
+          "fixSenderCompId",
+          "fixPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "fixSenderCompId": {
+            "type": "string"
+          },
+          "fixPassword": {
+            "type": "string"
+          },
+          "isLive": {
+            "type": "boolean",
+            "default": false
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "description": "Capture a cTrader venue from its FIX API SenderCompID and\n    password (the terminal's Settings &gt; FIX API dialog). Everything else\n    is derived: the trader login and broker from the SenderCompID\n    (&lt;env&gt;.&lt;broker&gt;.&lt;login&gt;), the host from live/demo\n    (live|demo.cfixapi.com) and the SSL TRADE port (5212). The OAuth token\n    columns stay empty (strategist_server's onboarding flow owns them)."
+      },
       "CrossVenuePaperLegView": {
         "required": [
           "venueId",

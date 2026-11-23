@@ -15,12 +15,11 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <!-- The push-feed contracts live in the shared submodule (platform-owned
-       schemas), one per service: the bot's serverevents.EngineStateFeed and
-       the backtest API's backtestevents.BacktestFeed — both subject + JSON +
-       timestamp, replay-latest-then-live. -->
+  <!-- The backtest API's push-feed contract (backtestevents.BacktestFeed):
+       subject + JSON + timestamp, replay-latest-then-live. The bot's feeds
+       moved to FIX (shared/FleetBridge/spec/FIX44-FLEET.xml); only the EventBroker hub is
+       shared between both hosts. -->
   <ItemGroup>
-    <Protobuf Include="..\Protos\bot\v1\bot_events.proto" ProtoRoot="..\Protos" GrpcServices="Server" />
     <Protobuf Include="..\Protos\backtest\v1\backtest_events.proto" ProtoRoot="..\Protos" GrpcServices="Server" />
   </ItemGroup>
 

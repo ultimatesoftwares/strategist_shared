@@ -25,8 +25,9 @@ building the C++ DLLs in the meantime — deliberate.
   `bridge/src/exports.cpp`; `Consts.cs` mirrors `bridge/src/consts.h`
   (ABI_VERSION=10 must keep matching `MTF_ABI_VERSION` in the EAs — any bump
   requires recompiling the `.ex4`/`.ex5`).
-- `spec/FIX44-FLEET.xml` — copy of the engine dialect (source of truth:
-  strategist_bot `shared/Fix/FIX44-FLEET.xml`; never edit here).
+- `spec/FIX44-FLEET.xml` — **the engine dialect's single source of truth**:
+  the bot's acceptor, this bridge, and the desktop feed client all load this
+  file (semantics in [`docs/fleet-fix.md`](../docs/fleet-fix.md)).
 - `tools/AbiCheck/` — JIT console harness: loads a published DLL, asserts all
   34 exports resolve undecorated and the lifecycle contract holds.
 - `tools/FixSmoke/` — AOT console: in-process acceptor+initiator logon with

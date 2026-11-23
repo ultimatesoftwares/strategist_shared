@@ -1,9 +1,8 @@
 namespace Trading.Core.Messages;
 
-// Payload contracts published on the gRPC push feed
-// (serverevents.EngineStateFeed) by the Bot, serialized as the `json` field
-// of each update. Keep them flat and serialization-friendly; consumers in
-// other languages bind to the JSON shape.
+// Payload contracts published on the FIX feed plane (U31 FeedEvent) by the
+// Bot, serialized as the JSON payload of each update. Keep them flat and
+// serialization-friendly; consumers in other languages bind to the JSON shape.
 //
 // Streaming messages (book updates, executions, terminal ticks/depth) carry a
 // `Source` envelope field identifying where the data came from, e.g.

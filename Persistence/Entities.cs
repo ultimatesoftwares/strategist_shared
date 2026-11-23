@@ -234,7 +234,7 @@ namespace Server.Models
         [MaxLength(100)]
         public string Symbol { get; set; } = "";
 
-        /// <summary>Strategy descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+        /// <summary>Strategy descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
         [MaxLength(200)]
         public string Strategy { get; set; } = "";
 
@@ -321,9 +321,9 @@ namespace Server.Models
     }
 
     /// <summary>
-    /// Registered ONNX strategy model (table <c>strategy_models</c>): the
-    /// artifact a strategy project trains and uploads (or a pre-built .onnx
-    /// uploaded directly). The primary key IS the sha256 of the model bytes
+    /// Registered ML.NET strategy model (table <c>strategy_models</c>): the
+    /// artifact a strategy project trains and uploads (or a pre-built
+    /// model.zip uploaded directly). The primary key IS the sha256 of the model bytes
     /// (lowercase hex) — re-uploading the same bytes is idempotent, a changed
     /// byte is a new model, and there is no mutable "latest" pointer. The
     /// bytes live under the server's models dir at <see cref="StoragePath"/>;
@@ -731,8 +731,8 @@ namespace Server.Models
     /// </summary>
     public class FleetTerminal
     {
-        /// <summary>Stable terminal_id (GUID hex); the EA presents the same id
-        /// when it dials the engine's TerminalService.</summary>
+        /// <summary>Stable terminal_id (GUID hex); the terminal bridge logs on
+        /// to the engine's FIX acceptor with this id as its SenderCompID.</summary>
         [MaxLength(64)]
         public string Id { get; set; } = "";
 

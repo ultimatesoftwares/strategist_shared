@@ -75,7 +75,7 @@ Notes on the hooked tables (realism gaps / limitations):
   old bar-based quant-runtime columns (InstanceId/PackageId/BarTs/Step/
   InputJson/TargetsJson/Fired/LatencyUs) are gone; rows are now per
   order-emitting evaluation — account, venue, symbol, strategy descriptor
-  (e.g. `onnx:models/x.onnx`), forecast (null in warmup/degraded), status
+  (e.g. `ml:models/x.zip`), forecast (null in warmup/degraded), status
   (`warmup|active|degraded`), and a top-of-book + position `BookJson`
   snapshot. Deliberately NOT every evaluation (strategies evaluate per book
   update; that would be thousands of rows/sec). Forecast is the raw

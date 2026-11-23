@@ -59,20 +59,20 @@ public enum StrategyKind : uint
     ImbalanceQuoter = 0,
     /// <summary>Never trades; the engine only maintains book/position state.</summary>
     Null = 1,
-    /// <summary>Model-driven bar strategy over an ONNX or ML.NET model (see Engine/OnnxStrategy.cs for the model contract).</summary>
-    Onnx = 2,
-    /// <summary>Experimental tick-driven ONNX classifier; intended for observe-only evaluation.</summary>
-    TickOnnx = 3,
+    /// <summary>Model-driven bar strategy over an ML.NET model.zip (see Engine/MlStrategy.cs for the model contract).</summary>
+    Ml = 2,
+    /// <summary>Experimental tick-driven ML.NET classifier; intended for observe-only evaluation.</summary>
+    TickMl = 3,
 }
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
 /// <remarks>
 /// <see cref="EntryThresholdBps"/> is the ImbalanceQuoter entry threshold, or
-/// for <see cref="StrategyKind.Onnx"/> the P(up) entry threshold in bps of
+/// for <see cref="StrategyKind.Ml"/> the P(up) entry threshold in bps of
 /// probability (6000 = 0.60; default). <see cref="ExitThresholdBps"/> and
-/// <see cref="MaxHoldBars"/> apply to Onnx only: the P(up) exit threshold
+/// <see cref="MaxHoldBars"/> apply to Ml only: the P(up) exit threshold
 /// (default 5000 = 0.50) and the maximum holding time in closed bars
-/// (default 5). <see cref="ModelPath"/> is required for Onnx and ignored
+/// (default 5). <see cref="ModelPath"/> is required for Ml and ignored
 /// otherwise.
 /// </remarks>
 public readonly record struct StrategyConfig(
@@ -81,11 +81,11 @@ public readonly record struct StrategyConfig(
 {
     public static StrategyConfig Default => new(StrategyKind.ImbalanceQuoter);
 
-    /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+    /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
     public string Describe() => Kind switch
     {
-        StrategyKind.Onnx => $"onnx:{ModelPath}",
-        StrategyKind.TickOnnx => $"tick_onnx:{ModelPath}",
+        StrategyKind.Ml => $"ml:{ModelPath}",
+        StrategyKind.TickMl => $"tick_ml:{ModelPath}",
         StrategyKind.Null => "null",
         _ => "imbalance_quoter",
     };

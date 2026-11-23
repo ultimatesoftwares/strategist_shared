@@ -110,7 +110,7 @@ namespace Server.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // Registered ONNX strategy models: content-hash PK, blob on disk,
+            // Registered ML.NET strategy models: content-hash PK, blob on disk,
             // row is the catalog entry.
             builder.Entity<StrategyModel>(e =>
             {

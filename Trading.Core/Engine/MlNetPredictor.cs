@@ -5,8 +5,8 @@ using Microsoft.ML.Trainers.FastTree;
 namespace Trading.Core.Engine;
 
 /// <summary>
-/// The ML.NET counterpart of <see cref="OnnxPredictor"/>: runs a
-/// <c>model.zip</c> saved with <c>MLContext.Model.Save(model, schema, path)</c>.
+/// The engine's model predictor: runs an ML.NET <c>model.zip</c> saved with
+/// <c>MLContext.Model.Save(model, schema, path)</c>.
 ///
 /// <para><b>Input</b>: the saved input schema (a column named <c>Label</c>
 /// is ignored) holds either</para>
@@ -14,7 +14,7 @@ namespace Trading.Core.Engine;
 /// <item><b>Named features</b>: up to <see cref="MaxNamedFeatures"/> <c>float</c>
 /// columns whose names are all <see cref="BarFeatures"/> (e.g. <c>Z60</c>,
 /// <c>Rsi14</c>), in any order; or</item>
-/// <item><b>Returns</b>: <see cref="OnnxPredictor.FeatureCount"/> float
+/// <item><b>Returns</b>: <see cref="ModelPredictor.ReturnCount"/> float
 /// close-to-close returns, <b>newest first</b> — one
 /// <c>float[FeatureCount]</c> vector column, or that many <c>float</c>
 /// columns in schema order.</item>
@@ -29,7 +29,7 @@ namespace Trading.Core.Engine;
 /// </summary>
 public sealed class MlNetPredictor : IModelPredictor
 {
-    private const int ReturnCount = OnnxPredictor.FeatureCount;
+    private const int ReturnCount = ModelPredictor.ReturnCount;
 
     /// <summary>Most named float input columns a model may take.</summary>
     public const int MaxNamedFeatures = 16;

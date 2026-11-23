@@ -183,14 +183,14 @@ public static class StrategyFactory
                 : ImbalanceQuoter.DefaultEntryThresholdBps,
             OrderQty = config.OrderQty > 0 ? config.OrderQty : 1,
         },
-        StrategyKind.Onnx => string.IsNullOrEmpty(config.ModelPath)
-            ? throw new InvalidOperationException("onnx strategy requires a model path")
-            : OnnxStrategy.FromFile(
+        StrategyKind.Ml => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("ml strategy requires a model path")
+            : MlStrategy.FromFile(
                 config.ModelPath, config.OrderQty, config.EntryThresholdBps,
                 config.ExitThresholdBps, config.MaxHoldBars),
-        StrategyKind.TickOnnx => string.IsNullOrEmpty(config.ModelPath)
-            ? throw new InvalidOperationException("tickOnnx strategy requires a model path")
-            : TickOnnxStrategy.FromFile(config.ModelPath, config.OrderQty,
+        StrategyKind.TickMl => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("tickMl strategy requires a model path")
+            : TickMlStrategy.FromFile(config.ModelPath, config.OrderQty,
                 config.EntryThresholdBps, config.ExitThresholdBps),
         StrategyKind.Null => new NullStrategy(),
         _ => throw new InvalidOperationException($"unknown strategy kind {(uint)config.Kind}"),
