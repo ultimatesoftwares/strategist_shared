@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    NativeAOT spike for the MT4/MT5 connector DLL (replaces the C++ bridge).
-    Publish (Windows only; NativeAOT cannot cross-compile from Linux):
+    NativeAOT MT4/MT5 connector DLL (replaces the C++ bridge): the Fleet_*
+    flat C ABI in front of a QuickFIX/n FIX 4.4 initiator (FIX44-FLEET
+    dialect). Publish (Windows only; NativeAOT cannot cross-compile from
+    Linux):
 
       dotnet publish -c Release -r win-x64   # MT5
       dotnet publish -c Release -r win-x86   # MT4 (requires .NET 9+ SDK)
@@ -27,6 +29,19 @@
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <!-- The gate tools are standalone projects, not part of the DLL. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);tools/**;winecheck/**;spec/**</DefaultItemExcludes>
+    <!-- Surface AOT/trim warnings from QuickFIXn in the build log. -->
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same version the engine-side bot uses. -->
+    <PackageReference Include="QuickFIXn.Core" Version="1.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Materialized to a temp file at Fleet_Init time (QuickFIX loads
+         dictionaries from disk). LogicalName keeps the lookup stable. -->
+    <EmbeddedResource Include="spec\FIX44-FLEET.xml" LogicalName="FIX44-FLEET.xml" />
+  </ItemGroup>
 
 </Project>

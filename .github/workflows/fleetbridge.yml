@@ -2,9 +2,10 @@ name: FleetBridge DLLs
 
 # Builds the NativeAOT MT4/MT5 connector DLLs on Windows (NativeAOT cannot
 # cross-compile from Linux) and gates them on:
-#   1. AbiCheck  - all 34 undecorated Fleet_* exports + lifecycle contract
-#   2. FixSmoke  - QuickFIX/n logon round-trip compiled with the same AOT
-#                  settings as the DLL
+#   0. StateTests - SharedState/Outbound unit tests (plain JIT, Linux)
+#   1. AbiCheck   - all 34 undecorated Fleet_* exports + lifecycle contract
+#   2. FixSmoke   - QuickFIX/n logon round-trip compiled with the same AOT
+#                   settings as the DLL
 # Artifacts: FleetBridge-win-x64 (MT5), FleetBridge-win-x86 (MT4).
 # On main, both DLLs are also published to GHCR as a scratch image
 # (ghcr.io/<owner>/fleetbridge) that the terminals Dockerfile pulls from —
@@ -23,7 +24,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  state-tests:
+    # Fast fail: pure state-machine tests need no Windows runner or AOT.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: "Gate 0: SharedState/Outbound unit tests"
+        run: dotnet run -c Release --project FleetBridge/tools/StateTests/StateTests.csproj
+
   build:
+    needs: state-tests
     runs-on: windows-latest
     strategy:
       fail-fast: false

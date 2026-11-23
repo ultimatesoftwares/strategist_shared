@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    SharedState/Outbound unit tests: port of the C++ bridge's
+    tests/state_tests.cpp (doctest). A plain console harness (exit 0 = pass)
+    so it runs the same way locally (JIT, any OS) and in CI before the
+    NativeAOT publish gates.
+
+      dotnet run -c Release
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>FleetBridge.StateTests</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Model fields are assigned by Exports.cs, which is deliberately not
+         compiled into this harness. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile the bridge sources under test directly (they are internal
+         to the DLL); transport-side files (Bridge/FleetApp/Exports) stay
+         out, mirroring the C++ test target. -->
+    <Compile Include="..\..\Consts.cs" Link="src\Consts.cs" />
+    <Compile Include="..\..\Fields.cs" Link="src\Fields.cs" />
+    <Compile Include="..\..\Model.cs" Link="src\Model.cs" />
+    <Compile Include="..\..\Outbound.cs" Link="src\Outbound.cs" />
+    <Compile Include="..\..\SharedState.cs" Link="src\SharedState.cs" />
+    <Compile Include="..\..\Wstr.cs" Link="src\Wstr.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="QuickFIXn.Core" Version="1.13.0" />
+  </ItemGroup>
+
+</Project>
