@@ -27,15 +27,19 @@ fi
 run_in_wine() {
     exe="$1"
     dll="$2"
+    dll_dir="$(cd "$(dirname "$dll")" && pwd)"
+    dll_name="$(basename "$dll")"
     echo "== running $exe against $dll under $image =="
+    # The DLL's directory gets its own mount: binding a single file inside the
+    # read-only /winecheck mount would fail (no mountpoint can be created).
     docker run --rm \
         -v "$here:/winecheck:ro" \
-        -v "$(cd "$(dirname "$dll")" && pwd)/$(basename "$dll"):/winecheck/FleetBridge.dll:ro" \
+        -v "$dll_dir:/dll:ro" \
         --entrypoint /bin/bash \
         "$image" \
         -c 'export WINEPREFIX=/root/.wine WINEDEBUG=-all DISPLAY=:99 && \
             (Xvfb :99 -screen 0 1024x768x16 >/dev/null 2>&1 &) && sleep 2 && \
-            wine "/winecheck/'"$exe"'" "Z:\\winecheck\\FleetBridge.dll"'
+            wine "/winecheck/'"$exe"'" "Z:\\dll\\'"$dll_name"'"'
 }
 
 run_in_wine winecheck64.exe "$dll64"
