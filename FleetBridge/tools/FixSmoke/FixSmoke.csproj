@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    QuickFIX/n-under-NativeAOT gate: publishes with the same AOT settings as
+    the bridge DLL, then runs an in-process acceptor + initiator logon over
+    loopback using the FIX44-FLEET dictionary. If QuickFIX/n's reflection or
+    serialization breaks under AOT, this is where it surfaces — before any
+    FIX code is wired into FleetBridge itself.
+
+      dotnet publish -c Release -r <rid>
+      publish\FixSmoke.exe        (exit 0 = gate passed)
+
+    If this fails with trim/reflection errors, the first mitigation to try is
+    rooting the QuickFIX assembly (TrimmerRootAssembly) and/or
+    DynamicDependency attributes on the reflected types.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Surface AOT/trim warnings from QuickFIXn in the build log. -->
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same version the engine-side bot uses. -->
+    <PackageReference Include="QuickFIXn.Core" Version="1.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\spec\FIX44-FLEET.xml" Link="spec\FIX44-FLEET.xml"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

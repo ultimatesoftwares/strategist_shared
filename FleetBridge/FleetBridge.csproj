@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    NativeAOT spike for the MT4/MT5 connector DLL (replaces the C++ bridge).
+    Publish (Windows only; NativeAOT cannot cross-compile from Linux):
+
+      dotnet publish -c Release -r win-x64   # MT5
+      dotnet publish -c Release -r win-x86   # MT4 (requires .NET 9+ SDK)
+
+    Output: bin/Release/net10.0/<rid>/publish/FleetBridge.dll
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FleetBridge</AssemblyName>
+    <RootNamespace>FleetBridge</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <SelfContained>true</SelfContained>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Keep the DLL lean; the bridge never needs these. -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <!-- The gate tools are standalone projects, not part of the DLL. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools/**;winecheck/**;spec/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,68 @@
+name: FleetBridge DLLs
+
+# Builds the NativeAOT MT4/MT5 connector DLLs on Windows (NativeAOT cannot
+# cross-compile from Linux) and gates them on:
+#   1. AbiCheck  - all 34 undecorated Fleet_* exports + lifecycle contract
+#   2. FixSmoke  - QuickFIX/n logon round-trip compiled with the same AOT
+#                  settings as the DLL
+# Artifacts: FleetBridge-win-x64 (MT5), FleetBridge-win-x86 (MT4).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "FleetBridge/**"
+      - ".github/workflows/fleetbridge.yml"
+  pull_request:
+    paths:
+      - "FleetBridge/**"
+      - ".github/workflows/fleetbridge.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-x86]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # win-x86 NativeAOT requires .NET 9+; the projects target net10.0.
+          dotnet-version: 10.0.x
+
+      - name: Publish FleetBridge.dll (NativeAOT, ${{ matrix.rid }})
+        run: >
+          dotnet publish FleetBridge/FleetBridge.csproj
+          -c Release -r ${{ matrix.rid }}
+          -o out/bridge
+
+      - name: Publish AbiCheck (${{ matrix.rid }})
+        run: >
+          dotnet publish FleetBridge/tools/AbiCheck/AbiCheck.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained
+          -o out/abicheck
+
+      - name: "Gate 1: ABI check"
+        run: out/abicheck/AbiCheck.exe out/bridge/FleetBridge.dll
+
+      - name: Publish FixSmoke (NativeAOT, ${{ matrix.rid }})
+        run: >
+          dotnet publish FleetBridge/tools/FixSmoke/FixSmoke.csproj
+          -c Release -r ${{ matrix.rid }}
+          -o out/fixsmoke
+
+      - name: "Gate 2: QuickFIX/n under NativeAOT"
+        run: out/fixsmoke/FixSmoke.exe
+
+      - name: Upload DLL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FleetBridge-${{ matrix.rid }}
+          path: |
+            out/bridge/FleetBridge.dll
+            out/bridge/FleetBridge.pdb
+          if-no-files-found: error

@@ -1,0 +1,738 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FIX44-FLEET: the strategist fleet dialect, FIX 4.4 session layer with
+  user-defined application messages (tags 20000+). One dictionary, three
+  consumers:
+
+    - strategist_bot        QuickFIX/n acceptor (engine side)
+    - the MT4/MT5 bridge    QuickFIX C++ initiator (terminal side)
+    - the desktop client    FIX initiator (telemetry/depth feed)
+
+  Wire contract: shared/docs/fleet-fix.md. Two session planes share the
+  acceptor port, selected by the TargetCompID the initiator logs on with:
+
+    TargetCompID=STRATEGIST       terminal plane (SenderCompID = terminal id)
+    TargetCompID=STRATEGIST-FEED  feed plane     (SenderCompID = client id)
+
+  Conventions:
+    - 64-bit integers (unix ms timestamps, tickets, magic numbers, logins,
+      tick volumes) are typed STRING to dodge 32-bit INT validation.
+    - Repeating-group entries MUST list fields in dictionary order; the
+      first field is the group delimiter and is mandatory per entry.
+    - Sessions are stateless: ResetOnLogon=Y both sides, no message
+      persistence, no resend-based recovery. The engine re-issues desired
+      subscriptions after every logon.
+-->
+<fix major="4" minor="4">
+  <header>
+    <field name="BeginString" required="Y" />
+    <field name="BodyLength" required="Y" />
+    <field name="MsgType" required="Y" />
+    <field name="SenderCompID" required="Y" />
+    <field name="TargetCompID" required="Y" />
+    <field name="MsgSeqNum" required="Y" />
+    <field name="SenderSubID" required="N" />
+    <field name="TargetSubID" required="N" />
+    <field name="PossDupFlag" required="N" />
+    <field name="PossResend" required="N" />
+    <field name="SendingTime" required="Y" />
+    <field name="OrigSendingTime" required="N" />
+    <field name="LastMsgSeqNumProcessed" required="N" />
+  </header>
+  <trailer>
+    <field name="CheckSum" required="Y" />
+  </trailer>
+  <messages>
+    <!-- ======================= session (admin) ======================= -->
+    <message name="Heartbeat" msgtype="0" msgcat="admin">
+      <field name="TestReqID" required="N" />
+    </message>
+    <message name="TestRequest" msgtype="1" msgcat="admin">
+      <field name="TestReqID" required="Y" />
+    </message>
+    <message name="ResendRequest" msgtype="2" msgcat="admin">
+      <field name="BeginSeqNo" required="Y" />
+      <field name="EndSeqNo" required="Y" />
+    </message>
+    <message name="Reject" msgtype="3" msgcat="admin">
+      <field name="RefSeqNum" required="Y" />
+      <field name="RefTagID" required="N" />
+      <field name="RefMsgType" required="N" />
+      <field name="SessionRejectReason" required="N" />
+      <field name="Text" required="N" />
+    </message>
+    <message name="SequenceReset" msgtype="4" msgcat="admin">
+      <field name="GapFillFlag" required="N" />
+      <field name="NewSeqNo" required="Y" />
+    </message>
+    <message name="Logout" msgtype="5" msgcat="admin">
+      <field name="Text" required="N" />
+    </message>
+    <!-- Terminal-plane logon carries the Hello (initiator->engine) and the
+         Welcome (engine->initiator ack) as custom tags. Feed-plane logons
+         carry no custom tags. -->
+    <message name="Logon" msgtype="A" msgcat="admin">
+      <field name="EncryptMethod" required="Y" />
+      <field name="HeartBtInt" required="Y" />
+      <field name="ResetSeqNumFlag" required="N" />
+      <field name="Username" required="N" />
+      <field name="Password" required="N" />
+      <!-- Hello (initiator -> engine) -->
+      <field name="FltPlatform" required="N" />
+      <field name="FltTerminalBuild" required="N" />
+      <field name="FltConnectorVersion" required="N" />
+      <field name="FltAccountLogin" required="N" />
+      <field name="FltBrokerServer" required="N" />
+      <field name="FltServerTzOffsetMin" required="N" />
+      <field name="FltMarginMode" required="N" />
+      <field name="FltBrokerName" required="N" />
+      <!-- Welcome (engine -> initiator) -->
+      <field name="FltSessionId" required="N" />
+      <field name="FltMaxTickBatchSize" required="N" />
+      <field name="FltHeartbeatIntervalMs" required="N" />
+    </message>
+
+    <!-- ================== terminal plane: events up ================== -->
+    <!-- TerminalStatus: rolling health + full open-position snapshot,
+         pushed every FltHeartbeatIntervalMs. -->
+    <message name="TerminalStatus" msgtype="U2" msgcat="app">
+      <field name="FltStatusTimeMs" required="Y" />
+      <field name="FltTerminalConnected" required="Y" />
+      <field name="FltEquity" required="N" />
+      <field name="FltBalance" required="N" />
+      <field name="FltPendingOrderCount" required="N" />
+      <group name="NoFltPositions" required="N">
+        <field name="FltPosTicket" required="Y" />
+        <field name="FltPosSymbol" required="N" />
+        <field name="FltPosType" required="N" />
+        <field name="FltPosVolume" required="N" />
+        <field name="FltPosPriceOpen" required="N" />
+        <field name="FltPosPriceCurrent" required="N" />
+        <field name="FltPosStopLoss" required="N" />
+        <field name="FltPosTakeProfit" required="N" />
+        <field name="FltPosProfit" required="N" />
+        <field name="FltPosSwap" required="N" />
+        <field name="FltPosCommission" required="N" />
+        <field name="FltPosComment" required="N" />
+        <field name="FltPosMagic" required="N" />
+        <field name="FltPosOpenTimeMs" required="N" />
+      </group>
+    </message>
+    <!-- TickBatch: 1..N chronological ticks + the account state sampled at
+         send time. -->
+    <message name="TickBatch" msgtype="U3" msgcat="app">
+      <field name="FltAccBalance" required="N" />
+      <field name="FltAccEquity" required="N" />
+      <field name="FltAccMargin" required="N" />
+      <field name="FltAccMarginFree" required="N" />
+      <group name="NoFltTicks" required="Y">
+        <field name="FltTickSymbol" required="Y" />
+        <field name="FltTickBid" required="N" />
+        <field name="FltTickAsk" required="N" />
+        <field name="FltTickLast" required="N" />
+        <field name="FltTickVolume" required="N" />
+        <field name="FltTickTimeMs" required="N" />
+        <field name="FltTickSpreadPoints" required="N" />
+      </group>
+    </message>
+    <!-- MarketDepthSnapshot: the FULL book on every change, entries exactly
+         as the terminal reports them (sells first, then buys, price
+         descending). -->
+    <message name="MarketDepthSnapshot" msgtype="U4" msgcat="app">
+      <field name="FltDepthSymbol" required="Y" />
+      <field name="FltDepthTimeMs" required="N" />
+      <group name="NoFltBookEntries" required="N">
+        <field name="FltBookSide" required="Y" />
+        <field name="FltBookPrice" required="N" />
+        <field name="FltBookVolume" required="N" />
+      </group>
+    </message>
+    <!-- TradeEvent: account trade-state change push. FltTradeSubject selects
+         which flat field set is present: 1 = FltPos* (position), 2 = FltOrd*
+         (pending order), 0 = neither. FltDeal* ride along when the platform
+         reports a deal. -->
+    <message name="TradeEvent" msgtype="U5" msgcat="app">
+      <field name="FltTradeKind" required="Y" />
+      <field name="FltTradeTimeMs" required="N" />
+      <field name="FltTradeSubject" required="Y" />
+      <field name="FltPosTicket" required="N" />
+      <field name="FltPosSymbol" required="N" />
+      <field name="FltPosType" required="N" />
+      <field name="FltPosVolume" required="N" />
+      <field name="FltPosPriceOpen" required="N" />
+      <field name="FltPosPriceCurrent" required="N" />
+      <field name="FltPosStopLoss" required="N" />
+      <field name="FltPosTakeProfit" required="N" />
+      <field name="FltPosProfit" required="N" />
+      <field name="FltPosSwap" required="N" />
+      <field name="FltPosCommission" required="N" />
+      <field name="FltPosComment" required="N" />
+      <field name="FltPosMagic" required="N" />
+      <field name="FltPosOpenTimeMs" required="N" />
+      <field name="FltOrdTicket" required="N" />
+      <field name="FltOrdSymbol" required="N" />
+      <field name="FltOrdType" required="N" />
+      <field name="FltOrdVolumeInitial" required="N" />
+      <field name="FltOrdVolumeCurrent" required="N" />
+      <field name="FltOrdPrice" required="N" />
+      <field name="FltOrdPriceCurrent" required="N" />
+      <field name="FltOrdStopLimitPrice" required="N" />
+      <field name="FltOrdStopLoss" required="N" />
+      <field name="FltOrdTakeProfit" required="N" />
+      <field name="FltOrdComment" required="N" />
+      <field name="FltOrdMagic" required="N" />
+      <field name="FltOrdSetupTimeMs" required="N" />
+      <field name="FltOrdExpirationMs" required="N" />
+      <field name="FltDealTicket" required="N" />
+      <field name="FltDealOrderTicket" required="N" />
+      <field name="FltDealPositionTicket" required="N" />
+      <field name="FltDealSymbol" required="N" />
+      <field name="FltDealType" required="N" />
+      <field name="FltDealVolume" required="N" />
+      <field name="FltDealPrice" required="N" />
+      <field name="FltDealProfit" required="N" />
+      <field name="FltDealSwap" required="N" />
+      <field name="FltDealCommission" required="N" />
+      <field name="FltDealComment" required="N" />
+      <field name="FltDealMagic" required="N" />
+      <field name="FltDealTimeMs" required="N" />
+      <field name="FltDealEntry" required="N" />
+      <field name="FltDealFee" required="N" />
+    </message>
+    <!-- CommandResult: exactly one per non-empty FltCommandId, even on
+         failure/timeout. FltPayloadType: 0 none, 1 order, 2 accountInfo,
+         3 history, 4 positions, 5 pendingOrders, 6 symbolInfo, 7 deals,
+         8 batchClose. -->
+    <message name="CommandResult" msgtype="U6" msgcat="app">
+      <field name="FltCommandId" required="Y" />
+      <field name="FltOk" required="Y" />
+      <field name="FltErrorCode" required="N" />
+      <field name="FltErrorPlatformCode" required="N" />
+      <field name="FltErrorMessage" required="N" />
+      <field name="FltErrorRetryable" required="N" />
+      <field name="FltPayloadType" required="Y" />
+      <!-- payload 1: order result -->
+      <field name="FltOrderTicket" required="N" />
+      <field name="FltPositionTicket" required="N" />
+      <field name="FltExecutedPrice" required="N" />
+      <field name="FltExecutedVolume" required="N" />
+      <field name="FltClientOrderId" required="N" />
+      <!-- payload 2: account info -->
+      <field name="FltAccountLogin" required="N" />
+      <field name="FltBrokerServer" required="N" />
+      <field name="FltAccBrokerCompany" required="N" />
+      <field name="FltAccCurrency" required="N" />
+      <field name="FltAccBalance" required="N" />
+      <field name="FltAccEquity" required="N" />
+      <field name="FltAccMargin" required="N" />
+      <field name="FltAccMarginFree" required="N" />
+      <field name="FltAccMarginLevel" required="N" />
+      <field name="FltAccLeverage" required="N" />
+      <field name="FltAccTradeAllowed" required="N" />
+      <field name="FltAccName" required="N" />
+      <field name="FltAccEnvironment" required="N" />
+      <!-- payload 3: bars -->
+      <group name="NoFltBars" required="N">
+        <field name="FltBarTimeMs" required="Y" />
+        <field name="FltBarOpen" required="N" />
+        <field name="FltBarHigh" required="N" />
+        <field name="FltBarLow" required="N" />
+        <field name="FltBarClose" required="N" />
+        <field name="FltBarTickVolume" required="N" />
+        <field name="FltBarRealVolume" required="N" />
+        <field name="FltBarSpread" required="N" />
+      </group>
+      <!-- payload 4: positions -->
+      <group name="NoFltPositions" required="N">
+        <field name="FltPosTicket" required="Y" />
+        <field name="FltPosSymbol" required="N" />
+        <field name="FltPosType" required="N" />
+        <field name="FltPosVolume" required="N" />
+        <field name="FltPosPriceOpen" required="N" />
+        <field name="FltPosPriceCurrent" required="N" />
+        <field name="FltPosStopLoss" required="N" />
+        <field name="FltPosTakeProfit" required="N" />
+        <field name="FltPosProfit" required="N" />
+        <field name="FltPosSwap" required="N" />
+        <field name="FltPosCommission" required="N" />
+        <field name="FltPosComment" required="N" />
+        <field name="FltPosMagic" required="N" />
+        <field name="FltPosOpenTimeMs" required="N" />
+      </group>
+      <!-- payload 5: pending orders -->
+      <group name="NoFltPendingOrders" required="N">
+        <field name="FltOrdTicket" required="Y" />
+        <field name="FltOrdSymbol" required="N" />
+        <field name="FltOrdType" required="N" />
+        <field name="FltOrdVolumeInitial" required="N" />
+        <field name="FltOrdVolumeCurrent" required="N" />
+        <field name="FltOrdPrice" required="N" />
+        <field name="FltOrdPriceCurrent" required="N" />
+        <field name="FltOrdStopLimitPrice" required="N" />
+        <field name="FltOrdStopLoss" required="N" />
+        <field name="FltOrdTakeProfit" required="N" />
+        <field name="FltOrdComment" required="N" />
+        <field name="FltOrdMagic" required="N" />
+        <field name="FltOrdSetupTimeMs" required="N" />
+        <field name="FltOrdExpirationMs" required="N" />
+      </group>
+      <!-- payload 6: symbol catalog -->
+      <group name="NoFltSymbolInfos" required="N">
+        <field name="FltSymName" required="Y" />
+        <field name="FltSymDescription" required="N" />
+        <field name="FltSymDigits" required="N" />
+        <field name="FltSymPoint" required="N" />
+        <field name="FltSymTickSize" required="N" />
+        <field name="FltSymTickValue" required="N" />
+        <field name="FltSymContractSize" required="N" />
+        <field name="FltSymVolumeMin" required="N" />
+        <field name="FltSymVolumeMax" required="N" />
+        <field name="FltSymVolumeStep" required="N" />
+        <field name="FltSymStopsLevelPoints" required="N" />
+        <field name="FltSymFreezeLevelPoints" required="N" />
+        <field name="FltSymMarginRequired" required="N" />
+        <field name="FltSymCurrencyBase" required="N" />
+        <field name="FltSymCurrencyProfit" required="N" />
+        <field name="FltSymCurrencyMargin" required="N" />
+        <field name="FltSymTradeAllowed" required="N" />
+        <field name="FltSymSpreadPoints" required="N" />
+      </group>
+      <!-- payload 7: deals -->
+      <group name="NoFltDeals" required="N">
+        <field name="FltDealTicket" required="Y" />
+        <field name="FltDealOrderTicket" required="N" />
+        <field name="FltDealPositionTicket" required="N" />
+        <field name="FltDealSymbol" required="N" />
+        <field name="FltDealType" required="N" />
+        <field name="FltDealVolume" required="N" />
+        <field name="FltDealPrice" required="N" />
+        <field name="FltDealProfit" required="N" />
+        <field name="FltDealSwap" required="N" />
+        <field name="FltDealCommission" required="N" />
+        <field name="FltDealComment" required="N" />
+        <field name="FltDealMagic" required="N" />
+        <field name="FltDealTimeMs" required="N" />
+        <field name="FltDealEntry" required="N" />
+        <field name="FltDealFee" required="N" />
+      </group>
+      <!-- payload 8: batch close -->
+      <group name="NoFltCloseResults" required="N">
+        <field name="FltCloseTicket" required="Y" />
+        <field name="FltCloseOk" required="N" />
+        <field name="FltCloseVolume" required="N" />
+        <field name="FltClosePrice" required="N" />
+        <field name="FltCloseErrorCode" required="N" />
+        <field name="FltCloseErrorPlatformCode" required="N" />
+        <field name="FltCloseErrorMessage" required="N" />
+        <field name="FltCloseErrorRetryable" required="N" />
+      </group>
+    </message>
+    <!-- LogEvent: noteworthy connector-side diagnostics. -->
+    <message name="LogEvent" msgtype="U24" msgcat="app">
+      <field name="FltLogLevel" required="Y" />
+      <field name="FltLogMessage" required="Y" />
+      <field name="FltLogTimeMs" required="N" />
+    </message>
+
+    <!-- ================= terminal plane: commands down ================ -->
+    <!-- Every command carries FltCommandId (empty = fire-and-forget) and an
+         optional absolute FltDeadlineMs. -->
+    <message name="SubscribeSymbols" msgtype="U7" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <group name="NoFltSymbolNames" required="Y">
+        <field name="FltSymbolName" required="Y" />
+      </group>
+    </message>
+    <message name="UnsubscribeSymbols" msgtype="U8" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <group name="NoFltSymbolNames" required="Y">
+        <field name="FltSymbolName" required="Y" />
+      </group>
+    </message>
+    <message name="SubscribeDepth" msgtype="U9" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <group name="NoFltSymbolNames" required="Y">
+        <field name="FltSymbolName" required="Y" />
+      </group>
+    </message>
+    <message name="UnsubscribeDepth" msgtype="U10" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <group name="NoFltSymbolNames" required="Y">
+        <field name="FltSymbolName" required="Y" />
+      </group>
+    </message>
+    <message name="PlaceOrder" msgtype="U11" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltClientOrderId" required="Y" />
+      <field name="FltOrderSymbol" required="Y" />
+      <field name="FltOrderType" required="Y" />
+      <field name="FltOrderVolume" required="Y" />
+      <field name="FltOrderPrice" required="N" />
+      <field name="FltOrderStopLimitPrice" required="N" />
+      <field name="FltOrderStopLoss" required="N" />
+      <field name="FltOrderTakeProfit" required="N" />
+      <field name="FltDeviationPoints" required="N" />
+      <field name="FltOrderMagic" required="N" />
+      <field name="FltOrderComment" required="N" />
+      <field name="FltOrderExpirationMs" required="N" />
+    </message>
+    <message name="ClosePosition" msgtype="U12" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltTicket" required="Y" />
+      <field name="FltVolume" required="N" />
+      <field name="FltDeviationPoints" required="N" />
+    </message>
+    <message name="ClosePositionsBatch" msgtype="U13" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltFilterSymbol" required="N" />
+      <field name="FltFilterMagic" required="N" />
+      <field name="FltDeviationPoints" required="N" />
+      <group name="NoFltTickets" required="N">
+        <field name="FltTicketEntry" required="Y" />
+      </group>
+    </message>
+    <message name="ModifyPosition" msgtype="U14" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltTicket" required="Y" />
+      <field name="FltStopLoss" required="N" />
+      <field name="FltTakeProfit" required="N" />
+    </message>
+    <message name="ModifyOrder" msgtype="U15" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltTicket" required="Y" />
+      <field name="FltPrice" required="N" />
+      <field name="FltStopLimitPrice" required="N" />
+      <field name="FltStopLoss" required="N" />
+      <field name="FltTakeProfit" required="N" />
+      <field name="FltExpirationMs" required="N" />
+    </message>
+    <message name="CancelOrder" msgtype="U16" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltTicket" required="Y" />
+    </message>
+    <message name="GetAccountInfo" msgtype="U17" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+    </message>
+    <message name="GetPositions" msgtype="U18" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltFilterSymbol" required="N" />
+      <field name="FltFilterMagic" required="N" />
+    </message>
+    <message name="GetPendingOrders" msgtype="U19" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltFilterSymbol" required="N" />
+      <field name="FltFilterMagic" required="N" />
+    </message>
+    <message name="GetSymbolInfo" msgtype="U20" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <group name="NoFltSymbolNames" required="N">
+        <field name="FltSymbolName" required="Y" />
+      </group>
+    </message>
+    <message name="GetHistory" msgtype="U21" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltHistSymbol" required="Y" />
+      <field name="FltHistTimeframe" required="Y" />
+      <field name="FltHistFromMs" required="N" />
+      <field name="FltHistToMs" required="N" />
+      <field name="FltHistCount" required="N" />
+    </message>
+    <message name="GetDealsHistory" msgtype="U22" msgcat="app">
+      <field name="FltCommandId" required="N" />
+      <field name="FltDeadlineMs" required="N" />
+      <field name="FltHistFromMs" required="N" />
+      <field name="FltHistToMs" required="N" />
+      <field name="FltFilterSymbol" required="N" />
+      <field name="FltFilterMagic" required="N" />
+    </message>
+    <!-- Ping requests an immediate TerminalStatus; no CommandResult. -->
+    <message name="FleetPing" msgtype="U23" msgcat="app">
+      <field name="FltPingTimeMs" required="N" />
+    </message>
+
+    <!-- ========================= feed plane ========================== -->
+    <!-- FeedSubscribe: replay the latest event per matching subject, then
+         stream live. At most one active per session; a new one replaces the
+         previous subscription. Empty/absent prefix = all subjects. -->
+    <message name="FeedSubscribe" msgtype="U30" msgcat="app">
+      <field name="FltFeedPrefix" required="N" />
+    </message>
+    <message name="FeedEvent" msgtype="U31" msgcat="app">
+      <field name="FltFeedSubject" required="Y" />
+      <field name="FltFeedJson" required="Y" />
+      <field name="FltFeedReceivedAtMs" required="N" />
+    </message>
+    <!-- FeedDepthSubscribe: live order books for 1..128 (venue, instrument)
+         selectors. At most one active per session; a new one replaces the
+         previous selector set. -->
+    <message name="FeedDepthSubscribe" msgtype="U32" msgcat="app">
+      <group name="NoFltSelectors" required="Y">
+        <field name="FltVenueId" required="Y" />
+        <field name="FltInstrumentId" required="N" />
+      </group>
+    </message>
+    <message name="FeedDepthUpdate" msgtype="U33" msgcat="app">
+      <field name="FltVenueId" required="Y" />
+      <field name="FltInstrumentId" required="Y" />
+      <field name="FltTsMs" required="N" />
+      <group name="NoFltBookEntries" required="N">
+        <field name="FltBookSide" required="Y" />
+        <field name="FltBookPrice" required="N" />
+        <field name="FltBookVolume" required="N" />
+      </group>
+    </message>
+  </messages>
+  <components />
+  <fields>
+    <!-- standard session-layer fields -->
+    <field number="7" name="BeginSeqNo" type="SEQNUM" />
+    <field number="8" name="BeginString" type="STRING" />
+    <field number="9" name="BodyLength" type="LENGTH" />
+    <field number="10" name="CheckSum" type="STRING" />
+    <field number="16" name="EndSeqNo" type="SEQNUM" />
+    <field number="34" name="MsgSeqNum" type="SEQNUM" />
+    <field number="35" name="MsgType" type="STRING" />
+    <field number="36" name="NewSeqNo" type="SEQNUM" />
+    <field number="43" name="PossDupFlag" type="BOOLEAN" />
+    <field number="45" name="RefSeqNum" type="SEQNUM" />
+    <field number="49" name="SenderCompID" type="STRING" />
+    <field number="50" name="SenderSubID" type="STRING" />
+    <field number="52" name="SendingTime" type="UTCTIMESTAMP" />
+    <field number="56" name="TargetCompID" type="STRING" />
+    <field number="57" name="TargetSubID" type="STRING" />
+    <field number="58" name="Text" type="STRING" />
+    <field number="97" name="PossResend" type="BOOLEAN" />
+    <field number="98" name="EncryptMethod" type="INT" />
+    <field number="108" name="HeartBtInt" type="INT" />
+    <field number="112" name="TestReqID" type="STRING" />
+    <field number="122" name="OrigSendingTime" type="UTCTIMESTAMP" />
+    <field number="123" name="GapFillFlag" type="BOOLEAN" />
+    <field number="141" name="ResetSeqNumFlag" type="BOOLEAN" />
+    <field number="369" name="LastMsgSeqNumProcessed" type="SEQNUM" />
+    <field number="371" name="RefTagID" type="INT" />
+    <field number="372" name="RefMsgType" type="STRING" />
+    <field number="373" name="SessionRejectReason" type="INT" />
+    <field number="553" name="Username" type="STRING" />
+    <field number="554" name="Password" type="STRING" />
+
+    <!-- command/result envelope -->
+    <field number="20001" name="FltCommandId" type="STRING" />
+    <field number="20002" name="FltDeadlineMs" type="STRING" />
+    <field number="20050" name="FltOk" type="BOOLEAN" />
+    <field number="20051" name="FltErrorCode" type="INT" />
+    <field number="20052" name="FltErrorPlatformCode" type="INT" />
+    <field number="20053" name="FltErrorMessage" type="STRING" />
+    <field number="20054" name="FltErrorRetryable" type="BOOLEAN" />
+    <field number="20055" name="FltPayloadType" type="INT" />
+
+    <!-- hello / welcome (logon) -->
+    <field number="20010" name="FltPlatform" type="INT" />
+    <field number="20011" name="FltTerminalBuild" type="STRING" />
+    <field number="20012" name="FltConnectorVersion" type="STRING" />
+    <field number="20013" name="FltAccountLogin" type="STRING" />
+    <field number="20014" name="FltBrokerServer" type="STRING" />
+    <field number="20015" name="FltServerTzOffsetMin" type="INT" />
+    <field number="20016" name="FltMarginMode" type="INT" />
+    <field number="20017" name="FltBrokerName" type="STRING" />
+    <field number="20020" name="FltSessionId" type="STRING" />
+    <field number="20021" name="FltMaxTickBatchSize" type="INT" />
+    <field number="20022" name="FltHeartbeatIntervalMs" type="INT" />
+
+    <!-- terminal status -->
+    <field number="20030" name="FltTerminalConnected" type="BOOLEAN" />
+    <field number="20031" name="FltEquity" type="FLOAT" />
+    <field number="20032" name="FltBalance" type="FLOAT" />
+    <field number="20033" name="FltPendingOrderCount" type="INT" />
+    <field number="20034" name="FltStatusTimeMs" type="STRING" />
+
+    <!-- positions (group + flat in TradeEvent) -->
+    <field number="20100" name="NoFltPositions" type="NUMINGROUP" />
+    <field number="20101" name="FltPosTicket" type="STRING" />
+    <field number="20102" name="FltPosSymbol" type="STRING" />
+    <field number="20103" name="FltPosType" type="INT" />
+    <field number="20104" name="FltPosVolume" type="FLOAT" />
+    <field number="20105" name="FltPosPriceOpen" type="FLOAT" />
+    <field number="20106" name="FltPosPriceCurrent" type="FLOAT" />
+    <field number="20107" name="FltPosStopLoss" type="FLOAT" />
+    <field number="20108" name="FltPosTakeProfit" type="FLOAT" />
+    <field number="20109" name="FltPosProfit" type="FLOAT" />
+    <field number="20110" name="FltPosSwap" type="FLOAT" />
+    <field number="20111" name="FltPosCommission" type="FLOAT" />
+    <field number="20112" name="FltPosComment" type="STRING" />
+    <field number="20113" name="FltPosMagic" type="STRING" />
+    <field number="20114" name="FltPosOpenTimeMs" type="STRING" />
+
+    <!-- ticks -->
+    <field number="20200" name="NoFltTicks" type="NUMINGROUP" />
+    <field number="20201" name="FltTickSymbol" type="STRING" />
+    <field number="20202" name="FltTickBid" type="FLOAT" />
+    <field number="20203" name="FltTickAsk" type="FLOAT" />
+    <field number="20204" name="FltTickLast" type="FLOAT" />
+    <field number="20205" name="FltTickVolume" type="STRING" />
+    <field number="20206" name="FltTickTimeMs" type="STRING" />
+    <field number="20207" name="FltTickSpreadPoints" type="INT" />
+    <field number="20210" name="FltAccBalance" type="FLOAT" />
+    <field number="20211" name="FltAccEquity" type="FLOAT" />
+    <field number="20212" name="FltAccMargin" type="FLOAT" />
+    <field number="20213" name="FltAccMarginFree" type="FLOAT" />
+
+    <!-- depth -->
+    <field number="20220" name="FltDepthSymbol" type="STRING" />
+    <field number="20221" name="FltDepthTimeMs" type="STRING" />
+    <field number="20222" name="NoFltBookEntries" type="NUMINGROUP" />
+    <field number="20223" name="FltBookSide" type="INT" />
+    <field number="20224" name="FltBookPrice" type="FLOAT" />
+    <field number="20225" name="FltBookVolume" type="FLOAT" />
+
+    <!-- trade events -->
+    <field number="20240" name="FltTradeKind" type="INT" />
+    <field number="20241" name="FltTradeTimeMs" type="STRING" />
+    <field number="20242" name="FltTradeSubject" type="INT" />
+
+    <!-- pending orders (group + flat in TradeEvent) -->
+    <field number="20260" name="FltOrdTicket" type="STRING" />
+    <field number="20261" name="FltOrdSymbol" type="STRING" />
+    <field number="20262" name="FltOrdType" type="INT" />
+    <field number="20263" name="FltOrdVolumeInitial" type="FLOAT" />
+    <field number="20264" name="FltOrdVolumeCurrent" type="FLOAT" />
+    <field number="20265" name="FltOrdPrice" type="FLOAT" />
+    <field number="20266" name="FltOrdPriceCurrent" type="FLOAT" />
+    <field number="20267" name="FltOrdStopLimitPrice" type="FLOAT" />
+    <field number="20268" name="FltOrdStopLoss" type="FLOAT" />
+    <field number="20269" name="FltOrdTakeProfit" type="FLOAT" />
+    <field number="20270" name="FltOrdComment" type="STRING" />
+    <field number="20271" name="FltOrdMagic" type="STRING" />
+    <field number="20272" name="FltOrdSetupTimeMs" type="STRING" />
+    <field number="20273" name="FltOrdExpirationMs" type="STRING" />
+
+    <!-- deals (group + flat in TradeEvent) -->
+    <field number="20280" name="FltDealTicket" type="STRING" />
+    <field number="20281" name="FltDealOrderTicket" type="STRING" />
+    <field number="20282" name="FltDealPositionTicket" type="STRING" />
+    <field number="20283" name="FltDealSymbol" type="STRING" />
+    <field number="20284" name="FltDealType" type="INT" />
+    <field number="20285" name="FltDealVolume" type="FLOAT" />
+    <field number="20286" name="FltDealPrice" type="FLOAT" />
+    <field number="20287" name="FltDealProfit" type="FLOAT" />
+    <field number="20288" name="FltDealSwap" type="FLOAT" />
+    <field number="20289" name="FltDealCommission" type="FLOAT" />
+    <field number="20290" name="FltDealComment" type="STRING" />
+    <field number="20291" name="FltDealMagic" type="STRING" />
+    <field number="20292" name="FltDealTimeMs" type="STRING" />
+    <field number="20293" name="FltDealEntry" type="INT" />
+    <field number="20294" name="FltDealFee" type="FLOAT" />
+
+    <!-- command result payloads -->
+    <field number="20300" name="FltOrderTicket" type="STRING" />
+    <field number="20301" name="FltPositionTicket" type="STRING" />
+    <field number="20302" name="FltExecutedPrice" type="FLOAT" />
+    <field number="20303" name="FltExecutedVolume" type="FLOAT" />
+    <field number="20312" name="FltAccBrokerCompany" type="STRING" />
+    <field number="20313" name="FltAccCurrency" type="STRING" />
+    <field number="20314" name="FltAccMarginLevel" type="FLOAT" />
+    <field number="20315" name="FltAccLeverage" type="INT" />
+    <field number="20316" name="FltAccTradeAllowed" type="BOOLEAN" />
+    <field number="20317" name="FltAccName" type="STRING" />
+    <field number="20318" name="FltAccEnvironment" type="STRING" />
+    <field number="20330" name="NoFltBars" type="NUMINGROUP" />
+    <field number="20331" name="FltBarTimeMs" type="STRING" />
+    <field number="20332" name="FltBarOpen" type="FLOAT" />
+    <field number="20333" name="FltBarHigh" type="FLOAT" />
+    <field number="20334" name="FltBarLow" type="FLOAT" />
+    <field number="20335" name="FltBarClose" type="FLOAT" />
+    <field number="20336" name="FltBarTickVolume" type="STRING" />
+    <field number="20337" name="FltBarRealVolume" type="STRING" />
+    <field number="20338" name="FltBarSpread" type="INT" />
+    <field number="20340" name="NoFltPendingOrders" type="NUMINGROUP" />
+    <field number="20350" name="NoFltSymbolInfos" type="NUMINGROUP" />
+    <field number="20351" name="FltSymName" type="STRING" />
+    <field number="20352" name="FltSymDescription" type="STRING" />
+    <field number="20353" name="FltSymDigits" type="INT" />
+    <field number="20354" name="FltSymPoint" type="FLOAT" />
+    <field number="20355" name="FltSymTickSize" type="FLOAT" />
+    <field number="20356" name="FltSymTickValue" type="FLOAT" />
+    <field number="20357" name="FltSymContractSize" type="FLOAT" />
+    <field number="20358" name="FltSymVolumeMin" type="FLOAT" />
+    <field number="20359" name="FltSymVolumeMax" type="FLOAT" />
+    <field number="20360" name="FltSymVolumeStep" type="FLOAT" />
+    <field number="20361" name="FltSymStopsLevelPoints" type="INT" />
+    <field number="20362" name="FltSymFreezeLevelPoints" type="INT" />
+    <field number="20363" name="FltSymMarginRequired" type="FLOAT" />
+    <field number="20364" name="FltSymCurrencyBase" type="STRING" />
+    <field number="20365" name="FltSymCurrencyProfit" type="STRING" />
+    <field number="20366" name="FltSymCurrencyMargin" type="STRING" />
+    <field number="20367" name="FltSymTradeAllowed" type="BOOLEAN" />
+    <field number="20368" name="FltSymSpreadPoints" type="STRING" />
+    <field number="20370" name="NoFltDeals" type="NUMINGROUP" />
+    <field number="20380" name="NoFltCloseResults" type="NUMINGROUP" />
+    <field number="20381" name="FltCloseTicket" type="STRING" />
+    <field number="20382" name="FltCloseOk" type="BOOLEAN" />
+    <field number="20383" name="FltCloseVolume" type="FLOAT" />
+    <field number="20384" name="FltClosePrice" type="FLOAT" />
+    <field number="20385" name="FltCloseErrorCode" type="INT" />
+    <field number="20386" name="FltCloseErrorPlatformCode" type="INT" />
+    <field number="20387" name="FltCloseErrorMessage" type="STRING" />
+    <field number="20388" name="FltCloseErrorRetryable" type="BOOLEAN" />
+
+    <!-- command payloads -->
+    <field number="20400" name="NoFltSymbolNames" type="NUMINGROUP" />
+    <field number="20401" name="FltSymbolName" type="STRING" />
+    <field number="20410" name="FltClientOrderId" type="STRING" />
+    <field number="20411" name="FltOrderSymbol" type="STRING" />
+    <field number="20412" name="FltOrderType" type="INT" />
+    <field number="20413" name="FltOrderVolume" type="FLOAT" />
+    <field number="20414" name="FltOrderPrice" type="FLOAT" />
+    <field number="20415" name="FltOrderStopLimitPrice" type="FLOAT" />
+    <field number="20416" name="FltOrderStopLoss" type="FLOAT" />
+    <field number="20417" name="FltOrderTakeProfit" type="FLOAT" />
+    <field number="20418" name="FltDeviationPoints" type="INT" />
+    <field number="20419" name="FltOrderMagic" type="STRING" />
+    <field number="20420" name="FltOrderComment" type="STRING" />
+    <field number="20421" name="FltOrderExpirationMs" type="STRING" />
+    <field number="20430" name="FltTicket" type="STRING" />
+    <field number="20431" name="FltVolume" type="FLOAT" />
+    <field number="20440" name="NoFltTickets" type="NUMINGROUP" />
+    <field number="20441" name="FltTicketEntry" type="STRING" />
+    <field number="20442" name="FltFilterSymbol" type="STRING" />
+    <field number="20443" name="FltFilterMagic" type="STRING" />
+    <field number="20450" name="FltStopLoss" type="FLOAT" />
+    <field number="20451" name="FltTakeProfit" type="FLOAT" />
+    <field number="20452" name="FltPrice" type="FLOAT" />
+    <field number="20453" name="FltStopLimitPrice" type="FLOAT" />
+    <field number="20454" name="FltExpirationMs" type="STRING" />
+    <field number="20460" name="FltHistSymbol" type="STRING" />
+    <field number="20461" name="FltHistTimeframe" type="INT" />
+    <field number="20462" name="FltHistFromMs" type="STRING" />
+    <field number="20463" name="FltHistToMs" type="STRING" />
+    <field number="20464" name="FltHistCount" type="INT" />
+    <field number="20470" name="FltPingTimeMs" type="STRING" />
+    <field number="20480" name="FltLogLevel" type="INT" />
+    <field number="20481" name="FltLogMessage" type="STRING" />
+    <field number="20482" name="FltLogTimeMs" type="STRING" />
+
+    <!-- feed plane -->
+    <field number="20500" name="FltFeedPrefix" type="STRING" />
+    <field number="20501" name="FltFeedSubject" type="STRING" />
+    <field number="20502" name="FltFeedJson" type="STRING" />
+    <field number="20503" name="FltFeedReceivedAtMs" type="STRING" />
+    <field number="20510" name="NoFltSelectors" type="NUMINGROUP" />
+    <field number="20511" name="FltVenueId" type="STRING" />
+    <field number="20512" name="FltInstrumentId" type="STRING" />
+    <field number="20513" name="FltTsMs" type="STRING" />
+  </fields>
+</fix>

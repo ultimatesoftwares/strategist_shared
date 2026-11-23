@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ABI gate: loads a published FleetBridge.dll, asserts all 34 Fleet_*
+    exports resolve undecorated, and smoke-tests the lifecycle contract.
+    Plain JIT console app (no AOT) so it runs anywhere; publish it
+    self-contained for the same RID as the DLL under test:
+
+      dotnet publish -c Release -r win-x64 (self-contained is the default)
+      publish\AbiCheck.exe path\to\FleetBridge.dll
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>
