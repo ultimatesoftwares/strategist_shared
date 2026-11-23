@@ -2052,7 +2052,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Rotating FixSenderCompId re-infers and persists\n    the broker, login and account id from it (env.broker.login) — the\n    SenderCompID is authoritative for the broker identity."
       },
       "UpdateEngineSettings": {
         "type": "object",
