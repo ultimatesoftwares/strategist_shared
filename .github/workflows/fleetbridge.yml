@@ -6,6 +6,9 @@ name: FleetBridge DLLs
 #   2. FixSmoke  - QuickFIX/n logon round-trip compiled with the same AOT
 #                  settings as the DLL
 # Artifacts: FleetBridge-win-x64 (MT5), FleetBridge-win-x86 (MT4).
+# On main, both DLLs are also published to GHCR as a scratch image
+# (ghcr.io/<owner>/fleetbridge) that the terminals Dockerfile pulls from —
+# raw workflow artifacts expire and need API auth, an OCI image does not.
 
 on:
   push:
@@ -66,3 +69,36 @@ jobs:
             out/bridge/FleetBridge.dll
             out/bridge/FleetBridge.pdb
           if-no-files-found: error
+
+  publish:
+    # Pack both DLLs into a minimal GHCR image so Dockerfiles can
+    # `COPY --from=ghcr.io/<owner>/fleetbridge:<tag> /win-x64/FleetBridge.dll ...`.
+    # Pin the commit tag for reproducible terminal builds; :latest tracks main.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the DLL image
+        run: |
+          cat > Dockerfile.fleetbridge <<'EOF'
+          FROM scratch
+          COPY dist/FleetBridge-win-x64/ /win-x64/
+          COPY dist/FleetBridge-win-x86/ /win-x86/
+          EOF
+          image=ghcr.io/${{ github.repository_owner }}/fleetbridge
+          docker build -f Dockerfile.fleetbridge \
+            -t "$image:latest" -t "$image:${{ github.sha }}" .
+          docker push --all-tags "$image"
