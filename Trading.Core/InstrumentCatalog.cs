@@ -38,7 +38,7 @@ public interface IInstrumentCatalogSource
     /// <summary>Canonical venue account key, e.g. "ctrader:1234:demo".</summary>
     string AccountKey { get; }
 
-    /// <summary>Provider segment of the key, e.g. "ctrader" | "alpaca" | "sim".</summary>
+    /// <summary>Provider segment of the key, e.g. "ctrader" | "metatrader5" | "sim".</summary>
     string Provider { get; }
 
     /// <summary>Fetch the venue's current instrument catalog.</summary>

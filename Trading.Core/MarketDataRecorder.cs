@@ -6,7 +6,7 @@ namespace Trading.Core;
 /// replayed through the backtest engine or used to train strategy models.
 ///
 /// Prices are written in the producing broker adapter's fixed-point scale;
-/// replay with the matching price scale (sim 100, Alpaca 10 000,
+/// replay with the matching price scale (sim 100,
 /// cTrader 100 000).
 ///
 /// Not thread-safe: <see cref="Record"/> must be called from the single

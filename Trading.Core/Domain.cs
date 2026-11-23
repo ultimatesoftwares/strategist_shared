@@ -34,7 +34,9 @@ public readonly record struct Bar(
 /// <summary>Execution feedback from a broker, fed back into the engine.</summary>
 public readonly record struct ExecutionReport(
     ulong OrderId, uint SymbolId, OrderStatus Status, Side Side,
-    long FillPrice, ulong FillQty, ulong LeavesQty, ulong TsNanos);
+    long FillPrice, ulong FillQty, ulong LeavesQty, ulong TsNanos,
+    ulong BrokerOrderTicket = 0, ulong BrokerPositionTicket = 0,
+    string? BrokerOrderId = null, bool IsPositionClose = false);
 
 /// <summary>A command emitted by the engine for the broker to execute.</summary>
 public abstract record OrderCommand(ulong OrderId, uint SymbolId)
@@ -57,8 +59,10 @@ public enum StrategyKind : uint
     ImbalanceQuoter = 0,
     /// <summary>Never trades; the engine only maintains book/position state.</summary>
     Null = 1,
-    /// <summary>ONNX model-driven bar strategy (see Engine/OnnxStrategy.cs for the model contract).</summary>
+    /// <summary>Model-driven bar strategy over an ONNX or ML.NET model (see Engine/OnnxStrategy.cs for the model contract).</summary>
     Onnx = 2,
+    /// <summary>Experimental tick-driven ONNX classifier; intended for observe-only evaluation.</summary>
+    TickOnnx = 3,
 }
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
@@ -81,6 +85,7 @@ public readonly record struct StrategyConfig(
     public string Describe() => Kind switch
     {
         StrategyKind.Onnx => $"onnx:{ModelPath}",
+        StrategyKind.TickOnnx => $"tick_onnx:{ModelPath}",
         StrategyKind.Null => "null",
         _ => "imbalance_quoter",
     };
@@ -104,7 +109,10 @@ public enum DecisionStatus : uint
 /// Forecast is a dimensionless signal (NaN when none was computed, e.g.
 /// during warm-up or degradation).
 /// </summary>
-public readonly record struct StrategyDecision(double Forecast, DecisionStatus Status)
+public readonly record struct StrategyDecision(
+    double Forecast, DecisionStatus Status, string? Reason = null,
+    string? SignalKind = null, double? Z60 = null, double? EntryThreshold = null,
+    double? ZThreshold = null)
 {
     /// <summary>Journal string for <see cref="Status"/>: "warmup" | "active" | "degraded".</summary>
     public string StatusString => Status switch

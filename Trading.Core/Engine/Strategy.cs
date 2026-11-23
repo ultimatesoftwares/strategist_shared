@@ -31,6 +31,12 @@ public readonly struct StrategyContext(
 /// </summary>
 public interface IStrategy
 {
+    /// <summary>Whether this strategy requires atomic quotes rather than book deltas.</summary>
+    bool RequiresAtomicQuotes => false;
+
+    /// <summary>Invalidate state after a queued quote exceeded its processing deadline.</summary>
+    void OnQuoteGap(in StrategyContext ctx, List<Intent> output) { }
+
     /// <summary>Called after every book update for the affected symbol.</summary>
     void OnBook(in StrategyContext ctx, List<Intent> output);
 
@@ -47,6 +53,19 @@ public interface IStrategy
     /// don't care). Bar strategies keep their own history.
     /// </summary>
     void OnBar(in StrategyContext ctx, in Bar bar, List<Intent> output)
+    {
+    }
+
+    /// <summary>Closed bars a bar strategy needs before its first decision
+    /// (0 = no warm-up). Hosts may pre-feed that much history via
+    /// <see cref="WarmBar"/>.</summary>
+    int WarmupBars => 0;
+
+    /// <summary>
+    /// Fold a historical bar into the strategy's state without trading on
+    /// it (warm-up only, oldest first, before live bars). Default: no-op.
+    /// </summary>
+    void WarmBar(in Bar bar)
     {
     }
 
@@ -169,6 +188,10 @@ public static class StrategyFactory
             : OnnxStrategy.FromFile(
                 config.ModelPath, config.OrderQty, config.EntryThresholdBps,
                 config.ExitThresholdBps, config.MaxHoldBars),
+        StrategyKind.TickOnnx => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("tickOnnx strategy requires a model path")
+            : TickOnnxStrategy.FromFile(config.ModelPath, config.OrderQty,
+                config.EntryThresholdBps, config.ExitThresholdBps),
         StrategyKind.Null => new NullStrategy(),
         _ => throw new InvalidOperationException($"unknown strategy kind {(uint)config.Kind}"),
     };

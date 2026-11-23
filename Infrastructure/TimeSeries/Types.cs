@@ -30,13 +30,13 @@ public readonly record struct Tick(
 /// <summary>
 /// A venue that can serve historical market data to the QuestDB store.
 /// The hosting process implements this over its broker connectivity
-/// (cTrader OpenAPI, the fleet hub's MT history REST, Alpaca REST) and
+/// (cTrader FIX, the fleet hub's MT history REST) and
 /// registers it with
 /// <see cref="QuestDb.RegisterSource"/>.
 /// </summary>
 public interface IVenueHistorySource
 {
-    /// <summary>Venue name: "ctrader", "metatrader", "alpaca" or "databento".</summary>
+    /// <summary>Venue name: "ctrader", "metatrader" or "databento".</summary>
     string Venue { get; }
 
     /// <summary>Bars of [range.From, range.To) from the venue, oldest first.</summary>

@@ -62,11 +62,16 @@ public sealed class LseHistorySource : IVenueHistorySource
         var pair = await ResolveAsync(symbol, ct);
         var trades = await _client.GetTradesAsync(pair.Market, pair.Symbol, range, ct);
         var ticks = new List<Tick>(trades.Count);
-        // The slice carries prints only; seq orders same-timestamp trades
-        // deterministically so re-fetching a chunk dedups cleanly.
-        long seq = 0;
+        // QuestDB stores TIMESTAMP at microsecond precision. Use the ordinal
+        // within each persisted timestamp as the dedup discriminator.
+        var sequenceByTimestamp = new Dictionary<long, long>();
         foreach (var t in trades)
-            ticks.Add(new Tick(symbol, VenueName, t.Time, t.Price, t.Price, t.Price, t.Size, seq++));
+        {
+            var timestamp = t.Time.Ticks / 10;
+            var seq = sequenceByTimestamp.GetValueOrDefault(timestamp);
+            sequenceByTimestamp[timestamp] = seq + 1;
+            ticks.Add(new Tick(symbol, VenueName, t.Time, t.Price, t.Price, t.Price, t.Size, seq));
+        }
         return ticks;
     }
 

@@ -28,12 +28,14 @@ namespace Server.Data
 
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<CTraderVenue> CTraderVenues => Set<CTraderVenue>();
-        public DbSet<AlpacaVenue> AlpacaVenues => Set<AlpacaVenue>();
         public DbSet<Instrument> Instruments => Set<Instrument>();
+        public DbSet<InstrumentArtwork> InstrumentArtworks => Set<InstrumentArtwork>();
 
         public DbSet<ModelDecision> ModelDecisions => Set<ModelDecision>();
         public DbSet<InstrumentCatalogEntry> InstrumentCatalog => Set<InstrumentCatalogEntry>();
         public DbSet<StrategyModel> StrategyModels => Set<StrategyModel>();
+        public DbSet<StrategyDeployment> StrategyDeployments => Set<StrategyDeployment>();
+        public DbSet<TradingAccountProfile> TradingAccountProfiles => Set<TradingAccountProfile>();
         public DbSet<BacktestResult> BacktestResults => Set<BacktestResult>();
         public DbSet<ProvisionJob> ProvisionJobs => Set<ProvisionJob>();
 
@@ -70,20 +72,28 @@ namespace Server.Data
                 // Strategy-path orders link to the model decision that caused
                 // them; SetNull keeps the order row if a decision is deleted.
                 e.HasIndex(x => x.DecisionId);
+                e.HasIndex(x => new { x.VenueId, x.BrokerPositionTicket });
+                e.HasIndex(x => new { x.VenueId, x.BrokerOrderTicket });
                 e.HasOne(x => x.Decision).WithMany()
                     .HasForeignKey(x => x.DecisionId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
-            // "venues" like its ctrader/alpaca siblings: each row is a
+            // "venues": each row is a
             // broker account credential, not a terminal workload (those live
             // in the fleet hub's registry).
             builder.Entity<CTraderVenue>().ToTable("ctrader_venues");
-            builder.Entity<AlpacaVenue>().ToTable("alpaca_venues");
 
             builder.Entity<Instrument>(e =>
             {
                 e.ToTable("instruments");
                 e.HasIndex(x => x.Symbol).IsUnique();
+            });
+            builder.Entity<InstrumentArtwork>(e =>
+            {
+                e.ToTable("instrument_artwork");
+                e.HasKey(x => x.InstrumentId);
+                e.HasOne<Instrument>().WithOne().HasForeignKey<InstrumentArtwork>(x => x.InstrumentId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Instrument catalog: every venue-native listing, synced from the
@@ -102,7 +112,22 @@ namespace Server.Data
 
             // Registered ONNX strategy models: content-hash PK, blob on disk,
             // row is the catalog entry.
-            builder.Entity<StrategyModel>(e => e.ToTable("strategy_models"));
+            builder.Entity<StrategyModel>(e =>
+            {
+                e.ToTable("strategy_models");
+                e.Property(x => x.MinBalanceUsd).HasPrecision(18, 2);
+                e.Property(x => x.AccountType).HasDefaultValue("all");
+                e.Property(x => x.Venues).HasDefaultValue("");
+                e.Property(x => x.Enabled).HasDefaultValue(true);
+            });
+            builder.Entity<StrategyDeployment>(e =>
+            {
+                e.ToTable("strategy_deployments");
+                e.HasIndex(x => x.ModelId);
+                e.HasOne<StrategyModel>().WithMany().HasForeignKey(x => x.ModelId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            builder.Entity<TradingAccountProfile>(e => e.ToTable("trading_account_profiles"));
 
             // Strategy decision journal: bot-written (OrderLog) for
             // evaluations that emitted orders; orders.DecisionId links back.

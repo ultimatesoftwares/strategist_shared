@@ -7,7 +7,7 @@ namespace Trading.Core.Messages;
 //
 // Streaming messages (book updates, executions, terminal ticks/depth) carry a
 // `Source` envelope field identifying where the data came from, e.g.
-// "alpaca:us-equities-paper", "ctrader:fx-demo", "mt5:terminal-7".
+// "ctrader:fx-demo", "sim:sim-demo", "mt5:terminal-7".
 
 /// <summary>One L2 book delta from a broker feed (qty 0 removes the level).</summary>
 public sealed record BookUpdateMessage(
@@ -20,6 +20,11 @@ public sealed record BookUpdateMessage(
     ulong Qty,
     ulong TsNanos,
     DateTime TimestampUtc);
+
+/// <summary>Last price and optional quote fields from a market-data-only feed.</summary>
+public sealed record MarketPriceMessage(
+    string Source, string Account, string Broker, string Symbol,
+    double Price, double? Bid, double? Ask, double? Volume, ulong TsNanos, DateTime TimestampUtc);
 
 /// <summary>One execution report (ack/fill/cancel/reject) from a broker.</summary>
 public sealed record ExecutionMessage(

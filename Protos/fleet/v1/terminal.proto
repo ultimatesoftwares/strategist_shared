@@ -119,6 +119,20 @@ message Hello {
   // Minutes east of UTC for the broker/server time, so the hub can translate
   // bar times without guessing (e.g. 120 for UTC+2).
   int32 server_tz_offset_minutes = 7;
+  // How the trading account books positions. MT4 is always hedging; MT5
+  // reports ACCOUNT_MARGIN_MODE. Unspecified means an older connector that
+  // does not report it (treat as unknown).
+  MarginMode margin_mode = 8;
+  // Broker company name as the terminal reports it (MT ACCOUNT_COMPANY,
+  // e.g. "Alpari Limited"); empty from connectors older than ABI 10.
+  string broker_name = 9;
+}
+
+enum MarginMode {
+  MARGIN_MODE_UNSPECIFIED = 0;
+  MARGIN_MODE_NETTING = 1;   // one net position per symbol (MT5 retail netting)
+  MARGIN_MODE_HEDGING = 2;   // independent positions per ticket (MT4, MT5 retail hedging)
+  MARGIN_MODE_EXCHANGE = 3;  // MT5 exchange mode: netting with exchange margin rules
 }
 
 // Welcome is the hub's handshake acknowledgement. It is the first command on

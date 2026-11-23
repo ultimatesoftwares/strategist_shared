@@ -29,6 +29,7 @@ public sealed class TradingEngine : IDisposable
     private bool _disposed;
 
     public event Action<OrderCommand>? OrderCommandReceived;
+    public bool RequiresAtomicQuotes => _strategy.RequiresAtomicQuotes;
 
     /// <summary>
     /// Create the engine with the given limits and strategy. Throws
@@ -98,6 +99,32 @@ public sealed class TradingEngine : IDisposable
         _intentBuffer.Clear();
         _strategy.OnTick(ctx, tick, _intentBuffer);
         ProcessIntents();
+    }
+
+    public void PublishQuoteGap(uint symbolId)
+    {
+        ThrowIfDisposed();
+        if (!_books.TryGetValue(symbolId, out var book))
+            return;
+        book.Clear();
+        var ctx = BuildContext(symbolId, book);
+        _intentBuffer.Clear();
+        _strategy.OnQuoteGap(ctx, _intentBuffer);
+        ProcessIntents();
+    }
+
+    /// <summary>Closed bars the strategy needs before its first decision.</summary>
+    public int StrategyWarmupBars => _strategy.WarmupBars;
+
+    /// <summary>
+    /// Pre-feed a historical bar for warm-up: the strategy folds it into its
+    /// state but cannot emit orders. Call on the engine thread (or before
+    /// the host loop starts), oldest bar first.
+    /// </summary>
+    public void WarmBar(in Bar bar)
+    {
+        ThrowIfDisposed();
+        _strategy.WarmBar(bar);
     }
 
     /// <summary>

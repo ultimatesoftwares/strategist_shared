@@ -7,7 +7,7 @@ namespace Strategist.Infrastructure.TimeSeries;
 /// <summary>
 /// QuestDB access for any service hosting the Repository module: the
 /// historical market-data store (writes via ILP over HTTP, reads via /exec
-/// SQL, fetches from a registered venue — ctrader, metatrader or alpaca).
+/// SQL, fetches from a registered venue — ctrader or metatrader).
 /// Configure via "QuestDb:Url" (QuestDb__Url in the compose
 /// environment) or the QUESTDB_URL environment variable; defaults to the
 /// compose service. Tables are created WAL + DEDUP on first write, so

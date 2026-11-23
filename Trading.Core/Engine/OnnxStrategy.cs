@@ -1,13 +1,15 @@
 namespace Trading.Core.Engine;
 
 /// <summary>
-/// The model-driven bar strategy: ONNX binary classifier over close-to-close
-/// returns, with mt5-bot-style entry/exit rules.
+/// The model-driven bar strategy: an ONNX or ML.NET binary classifier over
+/// close-to-close returns, with mt5-bot-style entry/exit rules.
 ///
-/// <para><b>Model contract</b>: see <see cref="OnnxPredictor"/> — one
+/// <para><b>Model contract</b>: the format is detected from the file
+/// (<see cref="ModelPredictor"/>). ONNX: see <see cref="OnnxPredictor"/> — one
 /// <c>f32[1, FeatureCount]</c> input of returns (newest first), outputs
 /// <c>label</c> (<c>i64[1]</c>) and <c>probabilities</c> (<c>f32[1, 2]</c>,
-/// <c>[P(down), P(up)]</c>).</para>
+/// <c>[P(down), P(up)]</c>). ML.NET <c>model.zip</c>: see
+/// <see cref="MlNetPredictor"/>.</para>
 ///
 /// <para><b>Rules (per closed bar)</b>:</para>
 /// <list type="bullet">
@@ -27,6 +29,17 @@ namespace Trading.Core.Engine;
 /// and never trades again (the host sees
 /// <see cref="DecisionStatus.Degraded"/>).</item>
 /// </list>
+///
+/// <para><b>Named-feature models</b>: an ML.NET model over
+/// <see cref="BarFeatures"/> is fed those features once
+/// <see cref="BarFeatures.Warmup"/> + 1 bars are seen. A classifier keeps the
+/// P(up) rules above. A regression <c>Score</c> is the predicted payoff in
+/// bps of fading the <c>Z60</c> extreme (<see cref="ModelOutputKind.Edge"/>):
+/// enter when flat, |Z60| ≥ <see cref="EdgeEntryZ"/> and Score ≥ the minimum
+/// edge, short above the mean and long below; flatten once Z60 reverts
+/// within <see cref="EdgeExitZ"/>, after the max hold bars, or at the stop
+/// loss. In this mode the entry threshold is the minimum edge in bps, the
+/// exit threshold is the stop loss in bps from the entry price.</para>
 /// </summary>
 public sealed class OnnxStrategy : IStrategy, IDisposable
 {
@@ -39,6 +52,21 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
     /// <summary>Default maximum holding time in closed bars.</summary>
     public const long DefaultMaxHoldBars = 5;
 
+    /// <summary>Edge mode: default minimum predicted payoff to enter, in bps.</summary>
+    public const long DefaultMinEdgeBps = 10;
+
+    /// <summary>Edge mode: default stop loss from the entry price, in bps.</summary>
+    public const long DefaultStopBps = 60;
+
+    /// <summary>Edge mode: default maximum holding time in closed bars.</summary>
+    public const long DefaultEdgeMaxHoldBars = 30;
+
+    /// <summary>Edge mode: |Z60| needed to enter.</summary>
+    public const double EdgeEntryZ = 2.0;
+
+    /// <summary>Edge mode: exit once Z60 has reverted to within this of the mean.</summary>
+    public const double EdgeExitZ = 0.25;
+
     private sealed class SymbolState
     {
         /// <summary>(bar open time ms, close) oldest → newest; capped at FeatureCount + 1.</summary>
@@ -49,32 +77,54 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
 
         /// <summary>Closed bars seen while holding the current position.</summary>
         public long BarsHeld;
+
+        /// <summary>Named-feature history (named-feature models only).</summary>
+        public BarFeatureWindow? Window;
+
+        /// <summary>Edge mode: price of the order that opened the position.</summary>
+        public long EntryPrice;
     }
 
-    private readonly OnnxPredictor _predictor;
+    private readonly IModelPredictor _predictor;
     private readonly ulong _orderQty;
     private readonly float _entryThreshold;
     private readonly float _exitThreshold;
     private readonly long _maxHoldBars;
+    private readonly IReadOnlyList<int>? _featureIndexes;
+    private readonly bool _edge;
+    private readonly double _minEdgeBps;
+    private readonly double _stopBps;
     private readonly Dictionary<uint, SymbolState> _state = [];
     // Reused per bar: the engine is single-threaded by contract.
-    private readonly float[] _features = new float[OnnxPredictor.FeatureCount];
+    private readonly float[] _features;
     private readonly double[] _returns = new double[OnnxPredictor.FeatureCount];
+    private readonly double[] _barFeatures = new double[BarFeatures.Names.Count];
 
     /// <summary>Set on inference failure: cancel everything, never trade again.</summary>
     private bool _poisoned;
     private StrategyDecision? _lastDecision;
 
     private OnnxStrategy(
-        OnnxPredictor predictor, ulong orderQty, float entryThreshold, float exitThreshold,
-        long maxHoldBars)
+        IModelPredictor predictor, ulong orderQty, float entryThreshold, float exitThreshold,
+        long maxHoldBars, double minEdgeBps = 0, double stopBps = 0)
     {
         _predictor = predictor;
         _orderQty = orderQty;
         _entryThreshold = entryThreshold;
         _exitThreshold = exitThreshold;
         _maxHoldBars = maxHoldBars;
+        _featureIndexes = predictor.FeatureIndexes;
+        _edge = predictor.OutputKind == ModelOutputKind.Edge;
+        _minEdgeBps = minEdgeBps;
+        _stopBps = stopBps;
+        _features = new float[predictor.FeatureCount];
     }
+
+    /// <summary>True for a named-feature regression model (see the class remarks).</summary>
+    public bool IsEdgeModel => _edge;
+
+    /// <summary>Closed bars needed before the first prediction.</summary>
+    public int WarmupBars => _featureIndexes is null ? OnnxPredictor.FeatureCount + 1 : BarFeatures.Warmup + 1;
 
     /// <summary>
     /// Load the model and build the strategy. 0 (or negative) parameters
@@ -84,23 +134,35 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
         string path, ulong orderQty, long entryThresholdBps, long exitThresholdBps,
         long maxHoldBars)
     {
-        var entry = entryThresholdBps > 0 ? entryThresholdBps : DefaultEntryThresholdBps;
-        var exit = exitThresholdBps > 0 ? exitThresholdBps : DefaultExitThresholdBps;
-        if (entry is < 1 or > 10_000 || exit is < 1 or > 10_000)
-        {
-            throw new InvalidOperationException(
-                $"onnx thresholds must be within 1..=10000 bps (entry {entry}, exit {exit})");
-        }
-
-        OnnxPredictor predictor;
+        IModelPredictor predictor;
         try
         {
-            predictor = OnnxPredictor.Load(path);
+            predictor = ModelPredictor.Load(path);
         }
         catch (Exception error)
         {
             throw new InvalidOperationException(
-                $"failed to load onnx model {path}: {error.Message}", error);
+                $"failed to load model {path}: {error.Message}", error);
+        }
+
+        if (predictor.OutputKind == ModelOutputKind.Edge)
+        {
+            return new OnnxStrategy(
+                predictor,
+                orderQty > 0 ? orderQty : 1,
+                0, 0,
+                maxHoldBars > 0 ? maxHoldBars : DefaultEdgeMaxHoldBars,
+                entryThresholdBps > 0 ? entryThresholdBps : DefaultMinEdgeBps,
+                exitThresholdBps > 0 ? exitThresholdBps : DefaultStopBps);
+        }
+
+        var entry = entryThresholdBps > 0 ? entryThresholdBps : DefaultEntryThresholdBps;
+        var exit = exitThresholdBps > 0 ? exitThresholdBps : DefaultExitThresholdBps;
+        if (entry is < 1 or > 10_000 || exit is < 1 or > 10_000)
+        {
+            predictor.Dispose();
+            throw new InvalidOperationException(
+                $"onnx thresholds must be within 1..=10000 bps (entry {entry}, exit {exit})");
         }
 
         return new OnnxStrategy(
@@ -112,6 +174,19 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
     }
 
     public StrategyDecision? LastDecision => _lastDecision;
+
+    /// <summary>History warm-up: fold the bar into the feature window only.</summary>
+    public void WarmBar(in Bar bar)
+    {
+        if (_poisoned)
+            return;
+        if (!_state.TryGetValue(bar.SymbolId, out var state))
+        {
+            state = new SymbolState();
+            _state[bar.SymbolId] = state;
+        }
+        UpdateWindow(state, bar, _features);
+    }
 
     /// <summary>Bar-driven: book/tick events carry no signal for this strategy.</summary>
     public void OnBook(in StrategyContext ctx, List<Intent> output)
@@ -133,23 +208,35 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
         }
         if (!UpdateWindow(state, bar, _features))
         {
-            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Warmup);
+            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Warmup,
+                "Waiting for sufficient valid bars, or ignoring a stale bar.");
             return;
         }
 
-        float up;
+        ModelPrediction prediction;
         try
         {
-            up = _predictor.Predict(_features).ProbabilityUp;
+            prediction = _predictor.Predict(_features);
         }
         catch (Exception)
         {
             _poisoned = true;
-            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Degraded);
+            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Degraded, "Model inference failed; trading is disabled.");
             CancelAll(ctx, output);
             return;
         }
-        _lastDecision = new StrategyDecision(up, DecisionStatus.Active);
+        if (_edge && !float.IsFinite(prediction.Score))
+        {
+            _poisoned = true;
+            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Degraded, "Model returned a non-finite score; trading is disabled.");
+            CancelAll(ctx, output);
+            return;
+        }
+        var up = prediction.ProbabilityUp;
+        _lastDecision = _edge
+            ? new StrategyDecision(prediction.Score, DecisionStatus.Active, SignalKind: "edgeBps",
+                Z60: _barFeatures[BarFeatures.Z60], EntryThreshold: _minEdgeBps, ZThreshold: EdgeEntryZ)
+            : new StrategyDecision(up, DecisionStatus.Active, SignalKind: "probabilityUp", EntryThreshold: _entryThreshold);
 
         if (ctx.Position == 0)
             state.BarsHeld = 0;
@@ -160,7 +247,23 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
         // (mirrors mt5-bot's "pending order on instrument" hold).
         if (ctx.OpenOrders.Count > 0)
         {
+            _lastDecision = _lastDecision.Value with { Reason = "Cancelling working orders before the next decision." };
             CancelAll(ctx, output);
+            return;
+        }
+
+        if (_edge)
+        {
+            var edgeTarget = EdgeTarget(ctx, bar, state, prediction.Score);
+            var z = _barFeatures[BarFeatures.Z60];
+            var reason = ctx.Position == 0
+                ? Math.Abs(z) < EdgeEntryZ && prediction.Score < _minEdgeBps ? "Z60 and predicted edge are below entry thresholds."
+                : Math.Abs(z) < EdgeEntryZ ? "Z60 is below the entry threshold."
+                : prediction.Score < _minEdgeBps ? "Predicted edge is below the entry threshold."
+                : edgeTarget > 0 ? "Long entry signal." : "Short entry signal."
+                : edgeTarget == 0 ? "Exit signal: reversion, stop or maximum hold." : "Holding position; no exit condition met.";
+            _lastDecision = _lastDecision.Value with { Reason = reason };
+            Place(ctx, bar, state, edgeTarget, output);
             return;
         }
 
@@ -188,6 +291,36 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
             target = heldTooLong || reversed || faded ? 0 : ctx.Position;
         }
 
+        _lastDecision = _lastDecision.Value with
+        {
+            Reason = target == ctx.Position ? "No position change indicated."
+                : target == 0 ? "Exit signal." : target > 0 ? "Long entry signal." : "Short entry signal."
+        };
+        Place(ctx, bar, state, target, output);
+    }
+
+    /// <summary>Edge-mode target position (see the class remarks).</summary>
+    private long EdgeTarget(in StrategyContext ctx, in Bar bar, SymbolState state, float score)
+    {
+        var z = _barFeatures[BarFeatures.Z60];
+        if (ctx.Position == 0)
+        {
+            if (Math.Abs(z) < EdgeEntryZ || score < _minEdgeBps)
+                return 0;
+            return z > 0 ? -(long)_orderQty : (long)_orderQty;
+        }
+
+        var direction = Math.Sign(ctx.Position);
+        var reverted = direction * z >= -EdgeExitZ;
+        var heldTooLong = state.BarsHeld >= _maxHoldBars;
+        var stopped = state.EntryPrice > 0 && bar.Close > 0
+            && direction * Math.Log((double)bar.Close / state.EntryPrice) <= -_stopBps / 1e4;
+        return reverted || heldTooLong || stopped ? 0 : ctx.Position;
+    }
+
+    private static void Place(
+        in StrategyContext ctx, in Bar bar, SymbolState state, long target, List<Intent> output)
+    {
         var delta = target - ctx.Position;
         if (delta == 0)
             return;
@@ -198,6 +331,8 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
             : ctx.Book.TryGetBestBid(out var bid, out _) ? bid : bar.Close;
         if (price <= 0)
             return;
+        if (ctx.Position == 0)
+            state.EntryPrice = price;
         output.Add(new Intent.Place(
             ctx.SymbolId, orderSide, price, (ulong)Math.Abs(delta)));
     }
@@ -215,6 +350,9 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
     /// </summary>
     private bool UpdateWindow(SymbolState state, in Bar bar, float[] features)
     {
+        if (_featureIndexes is not null)
+            return UpdateFeatures(state, bar, features);
+
         if (bar.Close <= 0)
         {
             state.Closes.Clear();
@@ -246,6 +384,22 @@ public sealed class OnnxStrategy : IStrategy, IDisposable
         for (var i = 0; i < OnnxPredictor.FeatureCount; i++)
             _returns[i] = state.Closes[i + 1].Close / state.Closes[i].Close - 1.0;
         return OnnxPredictor.TryFeaturesFromReturns(_returns, features);
+    }
+
+    private bool UpdateFeatures(SymbolState state, in Bar bar, float[] features)
+    {
+        state.Window ??= new BarFeatureWindow();
+        if (!state.Window.Add(bar.TimeUnixMs, bar.Close, bar.Volume) || !state.Window.IsWarm)
+            return false;
+        state.Window.Compute(_barFeatures);
+        for (var i = 0; i < features.Length; i++)
+        {
+            var value = (float)_barFeatures[_featureIndexes![i]];
+            if (!float.IsFinite(value))
+                return false;
+            features[i] = value;
+        }
+        return true;
     }
 
     public void Dispose() => _predictor.Dispose();

@@ -1,7 +1,7 @@
 namespace Trading.Core;
 
 /// <summary>
-/// The seam where real broker SDKs plug in (Interactive Brokers, Alpaca,
+/// The seam where real broker SDKs plug in (MetaTrader,
 /// cTrader, Binance, etc.). One adapter per broker; the host wires adapter
 /// events into the engine and routes engine commands back out.
 ///
@@ -25,6 +25,28 @@ public interface IBrokerAdapter : IDisposable
     void CancelOrder(OrderCommand.Cancel cancel);
 }
 
+/// <summary>Atomic bid/ask snapshots for tick-driven strategies.</summary>
+public interface IQuoteTickSource
+{
+    bool SupportsQuoteTicks { get; }
+    event Action<QuoteTick>? QuoteTick;
+}
+
+/// <summary>Marks an adapter whose execution reports are synthetic, not broker responses.</summary>
+public interface ISyntheticExecutionSource { }
+
+/// <summary>Broker routing that verifies the engine's position against broker truth.</summary>
+public interface IPositionAwareBroker
+{
+    void PlaceOrder(OrderCommand.Place order, long expectedPosition);
+}
+
+/// <summary>Notifies an adapter after an execution has been applied to the engine.</summary>
+public interface IExecutionAppliedObserver
+{
+    void OnExecutionApplied(in ExecutionReport report);
+}
+
 /// <summary>
 /// Optional broker capability: closed OHLC bars for subscribed symbols
 /// (feeding bar-driven strategies, e.g. <see cref="StrategyKind.Onnx"/>).
@@ -35,6 +57,19 @@ public interface IBrokerAdapter : IDisposable
 public interface IBarSource
 {
     event Action<Bar>? Bars;
+}
+
+/// <summary>
+/// Optional broker capability: recent closed bars from the venue's own
+/// history, used to warm bar-driven strategies at startup instead of
+/// waiting for live bars to accumulate.
+/// </summary>
+public interface IBarHistorySource
+{
+    /// <summary>Up to <paramref name="count"/> most recent closed bars at the
+    /// adapter's live bar interval, oldest first, in engine fixed point.</summary>
+    Task<IReadOnlyList<Bar>> RecentBarsAsync(
+        string brokerSymbol, uint engineSymbolId, int count, CancellationToken ct = default);
 }
 
 /// <summary>

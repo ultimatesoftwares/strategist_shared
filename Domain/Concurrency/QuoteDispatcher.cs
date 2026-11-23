@@ -12,8 +12,8 @@ namespace Core.Concurrency;
 /// through <see cref="Dispatch"/>, which is the one writer for the
 /// session's snapshot slot and the one producer for each attached ring.
 /// (cTrader's client delivers callbacks sequentially, so no extra funnel is
-/// needed today; a venue with concurrent callbacks — e.g. Alpaca's two
-/// streaming clients — must serialize before calling Dispatch. The DEBUG
+/// needed today; a venue with concurrent callbacks
+/// must serialize before calling Dispatch. The DEBUG
 /// guards in <see cref="SpscRing{T}"/> catch violations.)
 ///
 /// Split into partials by role:

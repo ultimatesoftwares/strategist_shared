@@ -12,6 +12,11 @@
          matching libonnxruntime per RID and flows it into every referencing
          executable's output. -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.22.1" />
+    <!-- ML.NET: runs model.zip files saved by MLContext.Model.Save
+         (Trading.Core.Engine.MlNetPredictor); FastTree adds the tree
+         trainers' model loaders. -->
+    <PackageReference Include="Microsoft.ML" Version="6.0.0" />
+    <PackageReference Include="Microsoft.ML.FastTree" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

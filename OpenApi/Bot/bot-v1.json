@@ -42,6 +42,29 @@
         }
       }
     },
+    "/api/accounts/{name}/reconnect": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Queue a single account runner for a fresh broker connection.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/accounts/{name}/positions": {
       "get": {
         "tags": [
@@ -61,6 +84,69 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/accounts/{name}/activity": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Latest bar decisions and broker state for the currently running strategy.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/accounts/{name}/latency": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "In-process latency histograms for market data and strategy order submission.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineLatencySnapshot"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineLatencySnapshot"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineLatencySnapshot"
+                }
+              }
+            }
           }
         }
       }
@@ -387,6 +473,369 @@
         }
       }
     },
+    "/api/cross-venue/monitors": {
+      "get": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Configured observe-only monitors and their current feed status.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/cross-venue/paper": {
+      "get": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "One-shot live-feed paper state; no broker orders are sent.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Starts a simulated pair using explicit assumptions and a server-managed journal.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPaperRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPaperRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPaperRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/cross-venue/paper/stop": {
+      "post": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Stop the paper run and cancel any simulated pending legs.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrossVenuePaperView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cross-venue/paper/review": {
+      "post": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Acknowledge the displayed simulated positions before replacing a stopped run.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPaperRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPaperRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPaperRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/cross-venue/comparison": {
+      "get": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Indicative buy-ask/sell-bid comparison; never an execution recommendation.",
+        "parameters": [
+          {
+            "name": "buyVenue",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sellVenue",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "instrument",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "maxAgeMs",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          {
+            "name": "estimatedCostBps",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/cross-venue/lead-lag": {
+      "get": {
+        "tags": [
+          "CrossVenue"
+        ],
+        "summary": "Local-arrival lead–lag heuristic; not a causal or executable signal.",
+        "parameters": [
+          {
+            "name": "referenceVenue",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetVenue",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "instrument",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "maxAgeMs",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          {
+            "name": "estimatedCostBps",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/instruments/catalog/sync": {
       "post": {
         "tags": [
@@ -402,6 +851,50 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/instruments/catalog/{id}/reference": {
+      "put": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Supply owned reference data (contract size + quote currency)\n    for one catalog row. cTrader's FIX SecurityList carries neither, and\n    FIX fill capture excludes unenriched rows (fails closed), so new\n    cTrader venues need this once per traded symbol.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentReferenceRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentReferenceRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstrumentReferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -472,6 +965,29 @@
           "Terminals"
         ],
         "summary": "List connected MT terminals with health and subscriptions.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/terminals/{terminalId}/positions": {
+      "get": {
+        "tags": [
+          "Terminals"
+        ],
+        "summary": "Fetch current broker positions without waiting for the next heartbeat.",
+        "parameters": [
+          {
+            "name": "terminalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -660,39 +1176,6 @@
         }
       }
     },
-    "/api/venues/alpaca": {
-      "post": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "Capture an Alpaca account (API key id + secret; isLive=false for paper).",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAlpacaVenueRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAlpacaVenueRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAlpacaVenueRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/venues/ctrader/{id}": {
       "put": {
         "tags": [
@@ -725,50 +1208,6 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateCTraderVenueRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/venues/alpaca/{id}": {
-      "put": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "Update an Alpaca venue (rotate keys, flip live/paper, enable/disable).",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAlpacaVenueRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAlpacaVenueRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAlpacaVenueRequest"
               }
             }
           },
@@ -825,92 +1264,252 @@
           }
         }
       }
-    },
-    "/api/venues/ctrader/oauth/start": {
-      "get": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "Start the cTrader OAuth flow: redirects the browser to the cTrader\nconsent page. After the user approves, cTrader redirects back to\n.../oauth/callback, which exchanges the code and captures every\naccount the token can trade as a venue.",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/venues/ctrader/oauth/callback": {
-      "get": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "cTrader OAuth redirect target: validates the CSRF state, exchanges the\nauthorization code for tokens, discovers every trading account the\ntoken covers, and upserts one venue per account (new venues start\nenabled; existing ones get their tokens rotated). Returns a small HTML\npage since the browser lands here directly.",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "error",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "error_description",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "CreateAlpacaVenueRequest": {
+      "CrossVenuePaperLegView": {
         "required": [
-          "apiKey",
-          "apiSecret"
+          "venueId",
+          "side",
+          "status",
+          "limitPrice",
+          "fillPrice",
+          "simulatedAcceptedNanos",
+          "fillReceivedNanos"
         ],
         "type": "object",
         "properties": {
-          "apiKey": {
+          "venueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
             "type": "string"
           },
-          "apiSecret": {
+          "status": {
             "type": "string"
           },
-          "isLive": {
-            "type": "boolean",
-            "default": false
+          "limitPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           },
-          "accountId": {
+          "fillPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "simulatedAcceptedNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "fillReceivedNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CrossVenuePaperView": {
+        "required": [
+          "status",
+          "stopReason",
+          "referenceVenue",
+          "targetVenue",
+          "instrument",
+          "quantity",
+          "maxAbsExposure",
+          "signalNanos",
+          "signalNetBps",
+          "reference",
+          "target",
+          "referencePosition",
+          "targetPosition",
+          "netPosition"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "stopReason": {
             "type": [
               "null",
               "string"
             ]
           },
-          "enabled": {
-            "type": "boolean",
-            "default": true
+          "referenceVenue": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetVenue": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instrument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "maxAbsExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "signalNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "signalNetBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reference": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperLegView"
+              }
+            ]
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperLegView"
+              }
+            ]
+          },
+          "referencePosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "targetPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "netPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "journalError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EngineLatencySnapshot": {
+        "required": [
+          "marketQueue",
+          "marketProcessing",
+          "brokerSubmission",
+          "expiredQuotes",
+          "brokerFirstResponse",
+          "brokerFirstFill",
+          "orderTimingEvictions",
+          "syntheticExecutions",
+          "quoteToSubmission",
+          "quoteToFirstResponse",
+          "quoteToFirstFill"
+        ],
+        "type": "object",
+        "properties": {
+          "marketQueue": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "marketProcessing": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "brokerSubmission": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "expiredQuotes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "brokerFirstResponse": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "brokerFirstFill": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "orderTimingEvictions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "syntheticExecutions": {
+            "type": "boolean"
+          },
+          "quoteToSubmission": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "quoteToFirstResponse": {
+            "$ref": "#/components/schemas/LatencySnapshot"
+          },
+          "quoteToFirstFill": {
+            "$ref": "#/components/schemas/LatencySnapshot"
           }
         }
       },
@@ -928,6 +1527,75 @@
           }
         }
       },
+      "LatencyBucket": {
+        "required": [
+          "upperBoundMs",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "upperBoundMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "LatencySnapshot": {
+        "required": [
+          "count",
+          "meanMs",
+          "maxMs",
+          "buckets"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "meanMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maxMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LatencyBucket"
+            }
+          }
+        }
+      },
       "ModifyPositionRequest": {
         "required": [
           "targetLots"
@@ -941,6 +1609,66 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ReviewPaperRequest": {
+        "required": [
+          "state",
+          "confirmDiscardSimulatedPositions"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperView"
+              }
+            ]
+          },
+          "confirmDiscardSimulatedPositions": {
+            "type": "boolean"
           }
         }
       },
@@ -994,6 +1722,131 @@
               "string"
             ],
             "format": "uint64"
+          }
+        }
+      },
+      "StartPaperRequest": {
+        "required": [
+          "referenceVenue",
+          "targetVenue",
+          "instrument",
+          "maxAgeMs",
+          "estimatedCostBps",
+          "minEstimatedNetBps",
+          "quantity",
+          "maxAbsExposure",
+          "referenceDelayMs",
+          "targetDelayMs",
+          "maxWaitMs",
+          "referenceSlippageUnits",
+          "targetSlippageUnits",
+          "assumeUnlimitedLiquidity"
+        ],
+        "type": "object",
+        "properties": {
+          "referenceVenue": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetVenue": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instrument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxAgeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estimatedCostBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "minEstimatedNetBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "maxAbsExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "referenceDelayMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "targetDelayMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxWaitMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "referenceSlippageUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "targetSlippageUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "assumeUnlimitedLiquidity": {
+            "type": "boolean"
           }
         }
       },
@@ -1069,35 +1922,6 @@
           }
         }
       },
-      "UpdateAlpacaVenueRequest": {
-        "type": "object",
-        "properties": {
-          "apiKey": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "apiSecret": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isLive": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          },
-          "enabled": {
-            "type": [
-              "null",
-              "boolean"
-            ]
-          }
-        }
-      },
       "UpdateCTraderVenueRequest": {
         "type": "object",
         "properties": {
@@ -1130,6 +1954,45 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "fixHost": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fixPort": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fixSsl": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "fixSenderCompId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fixLogin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fixPassword": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -1188,24 +2051,6 @@
               }
             ]
           },
-          "alpacaQuantityPerEngineLot": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "cTraderVolumePerEngineLot": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
           "metaTraderLotsPerEngineLot": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
@@ -1217,12 +2062,36 @@
           }
         },
         "description": "One PUT /api/settings edit. Everything is optional — only the fields sent\nchange; RiskSettings? UpdateEngineSettings.Risk, RiskGateSettings? UpdateEngineSettings.RiskGate, and\nStrategySettings? UpdateEngineSettings.Strategy replace their whole block when present."
+      },
+      "UpdateInstrumentReferenceRequest": {
+        "required": [
+          "contractSize",
+          "currency"
+        ],
+        "type": "object",
+        "properties": {
+          "contractSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "description": "Owned reference data for a catalog row that the venue cannot\n    serve itself (cTrader FIX SecurityList has no contract size/currency)."
       }
     }
   },
   "tags": [
     {
       "name": "Accounts"
+    },
+    {
+      "name": "CrossVenue"
     },
     {
       "name": "Instruments"

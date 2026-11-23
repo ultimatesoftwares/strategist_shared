@@ -12,7 +12,7 @@ namespace Trading.Core.Engine;
 /// <c>probabilities</c> (<c>f32[1, 2]</c>, <c>[P(down), P(up)]</c>) — the
 /// shape every sklearn/skl2onnx binary classifier exports naturally.</para>
 /// </summary>
-public sealed class OnnxPredictor : IDisposable
+public sealed class OnnxPredictor : IModelPredictor
 {
     public const int FeatureCount = 5;
 
@@ -25,8 +25,6 @@ public sealed class OnnxPredictor : IDisposable
     private readonly string[] _inputNames;
     // Reused per call: the engine is single-threaded by contract.
     private readonly float[] _inputBuffer = new float[FeatureCount];
-
-    public readonly record struct Prediction(long Class, float ProbabilityUp);
 
     private OnnxPredictor(InferenceSession session, string inputName)
     {
@@ -80,7 +78,7 @@ public sealed class OnnxPredictor : IDisposable
         return true;
     }
 
-    public Prediction Predict(ReadOnlySpan<float> features)
+    public ModelPrediction Predict(ReadOnlySpan<float> features)
     {
         if (features.Length != FeatureCount)
             throw new InvalidOperationException(
@@ -107,7 +105,7 @@ public sealed class OnnxPredictor : IDisposable
             throw new InvalidOperationException(
                 "ONNX model returned an invalid positive-class probability");
 
-        return new Prediction(labels[0], probabilityUp);
+        return new ModelPrediction(labels[0], probabilityUp);
     }
 
     public void Dispose()

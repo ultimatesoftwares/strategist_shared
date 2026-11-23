@@ -3,13 +3,13 @@ using Strategist.TimeSeries;
 namespace Strategist.Infrastructure.TimeSeries;
 
 // Source-backed fetching: pull history from a registered source (a broker
-// venue such as ctrader/metatrader/alpaca, or a data vendor) into the store.
+// venue such as ctrader/metatrader, or a data vendor) into the store.
 public sealed partial class QuestDb
 {
     /// <summary>Well-known broker venues that can back the historical store.
     /// Not exhaustive: any registered source (e.g. a data vendor) is accepted.</summary>
     public static readonly IReadOnlyList<string> FetchVenues =
-        ["ctrader", "metatrader", "alpaca"];
+        ["ctrader", "metatrader"];
 
     /// <summary>Registers a history source under its <see cref="IVenueHistorySource.Venue"/>
     /// tag (the `venue` column its ticks are written with).</summary>
@@ -24,7 +24,7 @@ public sealed partial class QuestDb
     public IReadOnlyCollection<string> RegisteredSources => _sources.Keys.ToList();
 
     /// <summary>
-    /// Fetches bars from a venue ("ctrader", "metatrader" or "alpaca")
+    /// Fetches bars from a venue ("ctrader" or "metatrader")
     /// into the store as a fault-tolerant job:
     /// the range is split into month microtasks, each retried independently
     /// and throttled between calls (rate limits), with state raised via
