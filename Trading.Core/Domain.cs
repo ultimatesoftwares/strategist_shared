@@ -55,7 +55,9 @@ public readonly record struct RiskLimits(long MaxPosition, ulong MaxOrderQty, ul
 
 public enum StrategyKind : uint
 {
-    /// <summary>The built-in demo market maker (see Engine/Strategy.cs).</summary>
+    /// <summary>RETIRED: the built-in demo market maker. Kept for wire/journal
+    /// compatibility only — <see cref="Engine.StrategyFactory"/> rejects it;
+    /// every trading strategy must be ML-driven.</summary>
     ImbalanceQuoter = 0,
     /// <summary>Never trades; the engine only maintains book/position state.</summary>
     Null = 1,
@@ -67,19 +69,20 @@ public enum StrategyKind : uint
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
 /// <remarks>
-/// <see cref="EntryThresholdBps"/> is the ImbalanceQuoter entry threshold, or
-/// for <see cref="StrategyKind.Ml"/> the P(up) entry threshold in bps of
-/// probability (6000 = 0.60; default). <see cref="ExitThresholdBps"/> and
-/// <see cref="MaxHoldBars"/> apply to Ml only: the P(up) exit threshold
-/// (default 5000 = 0.50) and the maximum holding time in closed bars
-/// (default 5). <see cref="ModelPath"/> is required for Ml and ignored
-/// otherwise.
+/// <see cref="EntryThresholdBps"/> is, for <see cref="StrategyKind.Ml"/>,
+/// the P(up) entry threshold in bps of probability (6000 = 0.60; default).
+/// <see cref="ExitThresholdBps"/> and <see cref="MaxHoldBars"/> apply to Ml
+/// only: the P(up) exit threshold (default 5000 = 0.50) and the maximum
+/// holding time in closed bars (default 5). <see cref="ModelPath"/> is
+/// required for Ml and TickMl — the only kinds that trade.
 /// </remarks>
 public readonly record struct StrategyConfig(
     StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
     long ExitThresholdBps = 0, long MaxHoldBars = 0)
 {
-    public static StrategyConfig Default => new(StrategyKind.ImbalanceQuoter);
+    /// <summary>No model, no trading: the default is the non-trading Null
+    /// strategy. Trading requires an explicit ML config (Ml/TickMl + model).</summary>
+    public static StrategyConfig Default => new(StrategyKind.Null);
 
     /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
     public string Describe() => Kind switch

@@ -96,12 +96,14 @@ public sealed class NullStrategy : IStrategy
 }
 
 /// <summary>
-/// A deliberately simple example strategy: joins the passive side when
-/// top-of-book imbalance is strongly in its favor, and flattens by quoting
-/// out when holding inventory.
+/// RETIRED demo strategy: joins the passive side when top-of-book imbalance
+/// is strongly in its favor, and flattens by quoting out when holding
+/// inventory.
 ///
-/// This is a placeholder for real alpha — the plumbing around it (book,
-/// risk, broker routing) is the production-shaped part.
+/// Not constructible through <see cref="StrategyFactory"/> any more — every
+/// trading strategy must be ML-driven (see <see cref="MlStrategy"/>). Kept
+/// only for research/tests via the explicit
+/// <see cref="TradingEngine(RiskLimits, IStrategy)"/> constructor.
 /// </summary>
 public sealed class ImbalanceQuoter : IStrategy
 {
@@ -170,19 +172,18 @@ public sealed class ImbalanceQuoter : IStrategy
 public static class StrategyFactory
 {
     /// <summary>
-    /// Create the configured strategy. Throws
-    /// <see cref="InvalidOperationException"/> for unknown kinds, missing
+    /// Create the configured strategy. Every trading strategy must be
+    /// ML-driven (<see cref="StrategyKind.Ml"/>/<see cref="StrategyKind.TickMl"/>
+    /// over an ML.NET model.zip); <see cref="StrategyKind.Null"/> is allowed
+    /// as the non-trading placeholder. Throws
+    /// <see cref="InvalidOperationException"/> for the retired non-ML
+    /// <see cref="StrategyKind.ImbalanceQuoter"/>, unknown kinds, missing
     /// model paths, out-of-range thresholds, or model-load failures.
     /// </summary>
     public static IStrategy Create(StrategyConfig config) => config.Kind switch
     {
-        StrategyKind.ImbalanceQuoter => new ImbalanceQuoter
-        {
-            EntryThresholdBps = config.EntryThresholdBps > 0
-                ? config.EntryThresholdBps
-                : ImbalanceQuoter.DefaultEntryThresholdBps,
-            OrderQty = config.OrderQty > 0 ? config.OrderQty : 1,
-        },
+        StrategyKind.ImbalanceQuoter => throw new InvalidOperationException(
+            "the imbalanceQuoter strategy was retired: every trading strategy must be ML-driven (ml/tickMl over an ML.NET model.zip)"),
         StrategyKind.Ml => string.IsNullOrEmpty(config.ModelPath)
             ? throw new InvalidOperationException("ml strategy requires a model path")
             : MlStrategy.FromFile(

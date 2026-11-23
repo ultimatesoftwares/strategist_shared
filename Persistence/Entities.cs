@@ -234,7 +234,8 @@ namespace Server.Models
         [MaxLength(100)]
         public string Symbol { get; set; } = "";
 
-        /// <summary>Strategy descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
+        /// <summary>Strategy descriptor, e.g. "ml:models/x.zip" (historical rows may
+        /// carry the retired "imbalance_quoter").</summary>
         [MaxLength(200)]
         public string Strategy { get; set; } = "";
 
