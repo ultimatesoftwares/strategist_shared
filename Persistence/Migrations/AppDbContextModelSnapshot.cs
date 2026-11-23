@@ -350,11 +350,6 @@ namespace Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
                     b.Property<long>("AccountId")
                         .HasMaxLength(100)
                         .HasColumnType("bigint");
@@ -370,9 +365,6 @@ namespace Server.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<long>("CredentialsVersion")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -380,9 +372,6 @@ namespace Server.Migrations
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("FixCredentialsVersion")
                         .HasColumnType("bigint");
@@ -415,18 +404,6 @@ namespace Server.Migrations
 
                     b.Property<bool>("IsLive")
                         .HasColumnType("boolean");
-
-                    b.Property<bool>("IsMarketFeed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LastRefreshError")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

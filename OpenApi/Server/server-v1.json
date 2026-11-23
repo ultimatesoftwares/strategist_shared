@@ -265,105 +265,6 @@
         }
       }
     },
-    "/api/venues/ctrader/oauth/start": {
-      "post": {
-        "tags": [
-          "CTraderOAuth"
-        ],
-        "operationId": "CTraderOAuth_CreateLaunch",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/BrowserLaunch"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BrowserLaunch"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BrowserLaunch"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "CTraderOAuth"
-        ],
-        "operationId": "CTraderOAuth_Start",
-        "parameters": [
-          {
-            "name": "ticket",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Found"
-          }
-        }
-      }
-    },
-    "/api/venues/ctrader/oauth/callback": {
-      "get": {
-        "tags": [
-          "CTraderOAuth"
-        ],
-        "operationId": "CTraderOAuth_Callback",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "error",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/html": { }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/history": {
       "get": {
         "tags": [
@@ -3927,17 +3828,6 @@
           }
         }
       },
-      "BrowserLaunch": {
-        "required": [
-          "url"
-        ],
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          }
-        }
-      },
       "CatalogSignupRequest": {
         "required": [
           "catalogEntryId"
@@ -6639,9 +6529,6 @@
   "tags": [
     {
       "name": "Backtests"
-    },
-    {
-      "name": "CTraderOAuth"
     },
     {
       "name": "History"

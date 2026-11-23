@@ -125,31 +125,14 @@ namespace Server.Models
         [MaxLength(100)] public string Broker { get; set; } = "";
         [MaxLength(10)] public string Currency { get; set; } = "";
         public bool IsLive { get; set; }
-        [MaxLength(512)] public string AccessToken { get; set; } = "";
-        [MaxLength(512)] public string RefreshToken { get; set; } = "";
-        public DateTime ExpiresAt { get; set; }
         public bool Approved { get; set; }
         public bool Enabled { get; set; }
 
-        /// Bumped atomically with every token change (OAuth or refresh); the
-        /// engine's reconciler rotates the venue connection when it moves.
-        public long CredentialsVersion { get; set; }
-
-        /// Last refresh failure (secret-free), surfaced in the GUI; null when
-        /// the last refresh succeeded. "reauth required" means the refresh token
-        /// itself is dead and the human OAuth flow must be repeated.
-        [MaxLength(300)]
-        public string? LastRefreshError { get; set; }
-
-        /// Marks the preferred account for market-data subscriptions.
-        public bool IsMarketFeed { get; set; }
-
         /// <summary>cTrader FIX API credentials (per trader login, from the
-        /// terminal's Settings &gt; FIX API dialog). Captured alongside the
-        /// OAuth tokens (which the server's onboarding flow owns) but
-        /// independent of them: they drive the receive-only FIX fill-capture
-        /// session. An empty host or password means FIX capture is not
-        /// configured.</summary>
+        /// terminal's Settings &gt; FIX API dialog) — the venue's only
+        /// credentials (the Open API/OAuth onboarding is retired): they drive
+        /// the receive-only FIX fill-capture session. An empty host or
+        /// password means FIX capture is not configured.</summary>
         [MaxLength(200)] public string FixHost { get; set; } = "";
 
         /// <summary>FIX TRADE port from the same dialog (SSL and plain differ).</summary>
@@ -409,9 +392,10 @@ namespace Server.Models
 
     /// <summary>
     /// Broker-reported trading-account facts (table <c>trading_account_profiles</c>),
-    /// keyed by the bot account name. Written when the account is onboarded or
-    /// connects: cTrader from ProtoOATrader.accountType, MT4/MT5 from the
-    /// connector hello's margin mode. Model deployment constraints read it.
+    /// keyed by the bot account name. Written when the account connects:
+    /// MT4/MT5 from the connector hello's margin mode (cTrader has no
+    /// broker-reported source since the Open API onboarding was retired).
+    /// Model deployment constraints read it.
     /// </summary>
     public class TradingAccountProfile
     {
