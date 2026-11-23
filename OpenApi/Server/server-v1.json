@@ -265,6 +265,105 @@
         }
       }
     },
+    "/api/venues/ctrader/oauth/start": {
+      "post": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_CreateLaunch",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLaunch"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLaunch"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLaunch"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_Start",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          }
+        }
+      }
+    },
+    "/api/venues/ctrader/oauth/callback": {
+      "get": {
+        "tags": [
+          "CTraderOAuth"
+        ],
+        "operationId": "CTraderOAuth_Callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/html": { }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/history": {
       "get": {
         "tags": [
@@ -349,6 +448,29 @@
           "History"
         ],
         "operationId": "History_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/history/{id}/resume": {
+      "post": {
+        "tags": [
+          "History"
+        ],
+        "operationId": "History_Resume",
         "parameters": [
           {
             "name": "id",
@@ -503,6 +625,30 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}/artwork": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "operationId": "Instruments_GetArtwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -900,6 +1046,319 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/constraints": {
+      "put": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_SetConstraints",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConstraintsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConstraintsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConstraintsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/enabled": {
+      "put": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_SetEnabled",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/instruments": {
+      "put": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_SetInstruments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentSelectionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentSelectionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/order-size": {
+      "put": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_SetOrderSize",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderSizeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderSizeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderSizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/performance": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_Performance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/deployments": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_Deployments",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/{id}/deployments/{accountKey}": {
+      "put": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_SetDeployment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/models/account-profiles": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "operationId": "Models_AccountProfiles",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/order-journal/events": {
+      "get": {
+        "tags": [
+          "OrderJournal"
+        ],
+        "operationId": "OrderJournal_Events",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/order-journal": {
+      "get": {
+        "tags": [
+          "OrderJournal"
+        ],
+        "operationId": "OrderJournal_List",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 500
             }
           }
         ],
@@ -3010,6 +3469,190 @@
   },
   "components": {
     "schemas": {
+      "AtomicTickResult": {
+        "required": [
+          "sessionId",
+          "venueId",
+          "priceScale",
+          "quotes",
+          "ordersPlaced",
+          "ordersCancelled",
+          "fills",
+          "rejections",
+          "pendingOrders",
+          "grossCashFlowUnits",
+          "commissionUnits",
+          "finalPositions",
+          "predictions"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceScale": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "quotes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordersPlaced": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordersCancelled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fills": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rejections": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendingOrders": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grossCashFlowUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "commissionUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "finalPositions": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64"
+            }
+          },
+          "predictions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AtomicTickSpec": {
+        "required": [
+          "file",
+          "orderDelayNanos",
+          "slippageUnits",
+          "maxQuoteGapNanos",
+          "commissionBps",
+          "commissionPerFillUnits"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "orderDelayNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "slippageUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxQuoteGapNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "commissionBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "commissionPerFillUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "assumeUnlimitedLiquidity": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "BacktestJobView": {
         "required": [
           "id",
@@ -3065,6 +3708,33 @@
                 "$ref": "#/components/schemas/BacktestResultView"
               }
             ]
+          },
+          "recordsProcessed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "runsCompleted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "runsTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -3163,6 +3833,26 @@
           "includeTrades": {
             "type": "boolean",
             "default": false
+          },
+          "atomicTick": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AtomicTickSpec"
+              }
+            ]
+          },
+          "crossVenue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenueReplaySpec"
+              }
+            ]
           }
         }
       },
@@ -3214,6 +3904,37 @@
                 "$ref": "#/components/schemas/SweepResultView"
               }
             ]
+          },
+          "atomicTick": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AtomicTickResult"
+              }
+            ]
+          },
+          "crossVenue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenueReplayResult"
+              }
+            ]
+          }
+        }
+      },
+      "BrowserLaunch": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -3226,6 +3947,35 @@
           "catalogEntryId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "ConstraintsRequest": {
+        "type": "object",
+        "properties": {
+          "minBalanceUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "venues": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "accountType": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3362,6 +4112,12 @@
               "null",
               "string"
             ]
+          },
+          "timeframe": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3408,6 +4164,16 @@
           "tradable": {
             "type": "boolean",
             "default": true
+          },
+          "artwork": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InstrumentArtworkRequest"
+              }
+            ]
           }
         }
       },
@@ -3621,6 +4387,485 @@
           }
         }
       },
+      "CrossVenuePaperLeg": {
+        "required": [
+          "venueId",
+          "side",
+          "status",
+          "limitPrice",
+          "fillPrice",
+          "fillTimeNanos",
+          "commission"
+        ],
+        "type": "object",
+        "properties": {
+          "venueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "limitPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fillPrice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fillTimeNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "commission": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "CrossVenuePaperResult": {
+        "required": [
+          "signalTimeNanos",
+          "signalEstimatedNetBps",
+          "quantity",
+          "reference",
+          "target",
+          "referencePosition",
+          "targetPosition",
+          "netPosition",
+          "hasPendingOrders",
+          "grossCashFlow",
+          "commission"
+        ],
+        "type": "object",
+        "properties": {
+          "signalTimeNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "signalEstimatedNetBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "reference": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperLeg"
+              }
+            ]
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperLeg"
+              }
+            ]
+          },
+          "referencePosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "targetPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "netPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "hasPendingOrders": {
+            "type": "boolean"
+          },
+          "grossCashFlow": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "commission": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "CrossVenuePaperSpec": {
+        "required": [
+          "quantity",
+          "minEstimatedNetBps",
+          "referenceDelayNanos",
+          "targetDelayNanos",
+          "maxExecutionWaitNanos",
+          "referenceSlippageUnits",
+          "targetSlippageUnits",
+          "referenceCommissionBps",
+          "targetCommissionBps",
+          "referenceCommissionPerFill",
+          "targetCommissionPerFill"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "minEstimatedNetBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "referenceDelayNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "targetDelayNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "maxExecutionWaitNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "uint64"
+          },
+          "referenceSlippageUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "targetSlippageUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "referenceCommissionBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "targetCommissionBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "referenceCommissionPerFill": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "targetCommissionPerFill": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "assumeUnlimitedLiquidity": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "CrossVenueReplayResult": {
+        "required": [
+          "clockDomainId",
+          "referenceSessionId",
+          "targetSessionId",
+          "referenceVenueId",
+          "targetVenueId",
+          "instrumentId",
+          "overlapStartNanos",
+          "overlapEndNanos",
+          "quotesProcessed",
+          "comparisons",
+          "positiveNetComparisons",
+          "leadLagObservations",
+          "bestEstimatedNetBps",
+          "unavailableStatuses"
+        ],
+        "type": "object",
+        "properties": {
+          "clockDomainId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceVenueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetVenueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "overlapStartNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "overlapEndNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "quotesProcessed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "comparisons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "positiveNetComparisons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "leadLagObservations": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "bestEstimatedNetBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unavailableStatuses": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64"
+            }
+          },
+          "paper": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperResult"
+              }
+            ]
+          }
+        }
+      },
+      "CrossVenueReplaySpec": {
+        "required": [
+          "referenceFile",
+          "targetFile",
+          "instrumentId",
+          "maxAgeNanos",
+          "estimatedCostBps"
+        ],
+        "type": "object",
+        "properties": {
+          "referenceFile": {
+            "type": "string"
+          },
+          "targetFile": {
+            "type": "string"
+          },
+          "instrumentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxAgeNanos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "estimatedCostBps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "paper": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CrossVenuePaperSpec"
+              }
+            ]
+          }
+        }
+      },
+      "DeploymentRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "balanceUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "Distribution": {
         "required": [
           "p5",
@@ -3688,6 +4933,17 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "EnabledRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },
@@ -3813,6 +5069,50 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "InstrumentArtworkRequest": {
+        "type": "object",
+        "properties": {
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          },
+          "baseIcon": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          },
+          "quoteIcon": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          }
+        }
+      },
+      "InstrumentSelectionRequest": {
+        "required": [
+          "instrumentIds"
+        ],
+        "type": "object",
+        "properties": {
+          "instrumentIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -3992,6 +5292,20 @@
       },
       "OptimizationObjective": {
         "type": "integer"
+      },
+      "OrderSizeRequest": {
+        "type": "object",
+        "properties": {
+          "orderQty": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
       },
       "PerformanceStats": {
         "required": [
@@ -4306,6 +5620,12 @@
             "format": "date-time"
           },
           "venue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeframe": {
             "type": [
               "null",
               "string"
@@ -4731,7 +6051,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "default": "imbalanceQuoter"
+            "default": "ml"
           },
           "model": {
             "type": [
@@ -4774,6 +6094,12 @@
             ],
             "format": "int64",
             "default": 0
+          },
+          "modelId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4980,6 +6306,16 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "artwork": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InstrumentArtworkRequest"
+              }
             ]
           }
         }
@@ -5305,6 +6641,9 @@
       "name": "Backtests"
     },
     {
+      "name": "CTraderOAuth"
+    },
+    {
       "name": "History"
     },
     {
@@ -5315,6 +6654,9 @@
     },
     {
       "name": "Models"
+    },
+    {
+      "name": "OrderJournal"
     },
     {
       "name": "Profile"

@@ -1,4 +1,4 @@
-namespace MarketData.Lse;
+namespace LSE.NET;
 
 /// <summary>
 /// Settings of the LSE Data 3.0 client (londonstrategicedge.com). The
@@ -14,13 +14,13 @@ public sealed class LseOptions
     /// <summary>The LSE Data 3.0 server.</summary>
     public string BaseUrl { get; set; } = "https://download.londonstrategicedge.com";
 
-    /// <summary>Seconds to wait for each HTTP call to start answering.</summary>
+    /// <summary>Per-attempt time limit for the HTTP headers or an individual body read.</summary>
     public int TimeoutSeconds { get; set; } = 60;
 
-    /// <summary>Retries of a call that got no answer, or a 429/500/502/503/504.</summary>
+    /// <summary>Retries of a transient failure, including an interrupted export or bad checksum.</summary>
     public int Retries { get; set; } = 3;
 
-    /// <summary>On a 429 with a Retry-After of two minutes or less, wait it
+    /// <summary>On a 429 or 503 with a Retry-After of two minutes or less, wait it
     /// out once per call without using up a retry.</summary>
     public bool WaitForLimit { get; set; } = true;
 
@@ -34,4 +34,20 @@ public sealed class LseOptions
 
     /// <summary>Adjust prices and volumes for splits (the server default).</summary>
     public bool Adjusted { get; set; } = true;
+
+    /// <summary>Maximum buffered export size. Both file bytes and typed rows may be held in memory.</summary>
+    public int MaxExportBytes { get; set; } = 128 * 1024 * 1024;
+
+    /// <summary>Maximum buffered successful JSON response size.</summary>
+    public int MaxJsonBytes { get; set; } = 8 * 1024 * 1024;
+
+    internal static void ValidateKey(string key)
+    {
+        if (string.IsNullOrEmpty(key) || key.Any(c => c is < '!' or > '~'))
+            throw new ArgumentException("Supply an LSE API key without whitespace or control characters.", "apiKey");
+    }
+
+    internal static bool IsSecureEndpoint(Uri uri, string secure, string insecure) =>
+        uri.IsAbsoluteUri && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0
+        && (uri.Scheme == secure || uri.IsLoopback && uri.Scheme == insecure);
 }

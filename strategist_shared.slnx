@@ -4,7 +4,7 @@
   <Project Path="Domain/Domain.csproj" />
   <Project Path="EventFeed/EventFeed.csproj" />
   <Project Path="Infrastructure/Infrastructure.csproj" />
-  <Project Path="MarketData.Lse/MarketData.Lse.csproj" />
+  <Project Path="MarketData.Lse/LSE.NET.csproj" />
   <Project Path="Persistence/Persistence.csproj" />
   <Project Path="Trading.Core/Trading.Core.csproj" />
 </Solution>

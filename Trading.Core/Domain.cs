@@ -53,34 +53,40 @@ public readonly record struct RiskLimits(long MaxPosition, ulong MaxOrderQty, ul
 
 public enum StrategyKind : uint
 {
-    /// <summary>The built-in demo market maker (see Engine/Strategy.cs).</summary>
+    /// <summary>RETIRED: the built-in demo market maker. Kept for wire/journal
+    /// compatibility only — <see cref="Engine.StrategyFactory"/> rejects it;
+    /// every trading strategy must be ML-driven.</summary>
     ImbalanceQuoter = 0,
     /// <summary>Never trades; the engine only maintains book/position state.</summary>
     Null = 1,
-    /// <summary>ONNX model-driven bar strategy (see Engine/OnnxStrategy.cs for the model contract).</summary>
-    Onnx = 2,
+    /// <summary>Model-driven bar strategy over an ML.NET model.zip (see Engine/MlStrategy.cs for the model contract).</summary>
+    Ml = 2,
+    /// <summary>Experimental tick-driven ML.NET classifier; intended for observe-only evaluation.</summary>
+    TickMl = 3,
 }
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
 /// <remarks>
-/// <see cref="EntryThresholdBps"/> is the ImbalanceQuoter entry threshold, or
-/// for <see cref="StrategyKind.Onnx"/> the P(up) entry threshold in bps of
-/// probability (6000 = 0.60; default). <see cref="ExitThresholdBps"/> and
-/// <see cref="MaxHoldBars"/> apply to Onnx only: the P(up) exit threshold
-/// (default 5000 = 0.50) and the maximum holding time in closed bars
-/// (default 5). <see cref="ModelPath"/> is required for Onnx and ignored
-/// otherwise.
+/// <see cref="EntryThresholdBps"/> is, for <see cref="StrategyKind.Ml"/>,
+/// the P(up) entry threshold in bps of probability (6000 = 0.60; default).
+/// <see cref="ExitThresholdBps"/> and <see cref="MaxHoldBars"/> apply to Ml
+/// only: the P(up) exit threshold (default 5000 = 0.50) and the maximum
+/// holding time in closed bars (default 5). <see cref="ModelPath"/> is
+/// required for Ml and TickMl — the only kinds that trade.
 /// </remarks>
 public readonly record struct StrategyConfig(
     StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
     long ExitThresholdBps = 0, long MaxHoldBars = 0)
 {
-    public static StrategyConfig Default => new(StrategyKind.ImbalanceQuoter);
+    /// <summary>No model, no trading: the default is the non-trading Null
+    /// strategy. Trading requires an explicit ML config (Ml/TickMl + model).</summary>
+    public static StrategyConfig Default => new(StrategyKind.Null);
 
-    /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+    /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
     public string Describe() => Kind switch
     {
-        StrategyKind.Onnx => $"onnx:{ModelPath}",
+        StrategyKind.Ml => $"ml:{ModelPath}",
+        StrategyKind.TickMl => $"tick_ml:{ModelPath}",
         StrategyKind.Null => "null",
         _ => "imbalance_quoter",
     };
@@ -104,7 +110,10 @@ public enum DecisionStatus : uint
 /// Forecast is a dimensionless signal (NaN when none was computed, e.g.
 /// during warm-up or degradation).
 /// </summary>
-public readonly record struct StrategyDecision(double Forecast, DecisionStatus Status)
+public readonly record struct StrategyDecision(
+    double Forecast, DecisionStatus Status, string? Reason = null,
+    string? SignalKind = null, double? Z60 = null, double? EntryThreshold = null,
+    double? ZThreshold = null)
 {
     /// <summary>Journal string for <see cref="Status"/>: "warmup" | "active" | "degraded".</summary>
     public string StatusString => Status switch

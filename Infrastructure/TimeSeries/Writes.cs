@@ -49,7 +49,7 @@ public sealed partial class QuestDb
         return count;
     }
 
-    /// <summary>Writes ticks into the historical store (upsert on ts+symbol+venue).</summary>
+    /// <summary>Writes ticks into the historical store (upsert on ts+symbol+venue+seq).</summary>
     public async Task<int> WriteTicksAsync(IEnumerable<Tick> ticks, CancellationToken ct = default)
     {
         await EnsureTablesAsync(ct);
@@ -65,17 +65,14 @@ public sealed partial class QuestDb
                 .Column("last", t.Last)
                 .Column("last_size", t.LastSize)
                 .Column("seq", t.Seq);
-            await sender.AtAsync(MillisUtc(t.Ts), ct);
+            await sender.AtAsync(AsUtc(t.Ts), ct);
             count++;
         }
         if (count > 0) await sender.SendAsync(ct);
         return count;
     }
 
-    /// <summary>Millisecond-truncated UTC timestamp: the hand-rolled ILP
-    /// writer always sent ms-precision nanos, and the DEDUP upsert keys
-    /// include ts — finer precision would stop re-provisioned rows from
-    /// upserting over rows written before the client swap.</summary>
+    /// <summary>Millisecond-truncated UTC timestamp used for bars.</summary>
     private static DateTime MillisUtc(DateTime ts)
     {
         var utc = AsUtc(ts);

@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.idea/
+*.nupkg
+*.snupkg
+[Bb]in/
+[Oo]bj/
+artifacts/

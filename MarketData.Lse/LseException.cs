@@ -1,14 +1,15 @@
 using System.Text.Json;
 
-namespace MarketData.Lse;
+namespace LSE.NET;
 
 /// <summary>
 /// A refusal from the LSE Data 3.0 server: the structured error body
 /// {"code", "message", "required_plan", "retry_after"} with its HTTP status.
-/// Status 0 is a client-side failure (no answer, checksum mismatch).
+/// Status 0 is a client-side or WebSocket failure.
 /// </summary>
 public sealed class LseException : Exception
 {
+    /// <summary>Creates an exception with the HTTP status (or zero) and machine-readable code.</summary>
     public LseException(int status, string code, string message,
         TimeSpan? retryAfter = null, string? requiredPlanJson = null)
         : base(message)
@@ -32,15 +33,16 @@ public sealed class LseException : Exception
     /// <summary>The "required_plan" object of a 403 plan-required, as raw JSON.</summary>
     public string? RequiredPlanJson { get; }
 
-    public override string ToString() => $"LSE {Status} {Code}: {Message}";
+    /// <summary>The close code for a WebSocket refusal, when available.</summary>
+    public System.Net.WebSockets.WebSocketCloseStatus? WebSocketCloseStatus { get; init; }
 
     /// <summary>Builds the exception from a refusal's status, body and
     /// Retry-After header. Tolerates non-JSON bodies.</summary>
-    internal static LseException Parse(int status, string body, TimeSpan? retryAfterHeader = null)
+    internal static LseException Parse(int status, string body, TimeSpan? retryAfterHeader = null, string? secret = null)
     {
         var code = $"http-{status}";
-        var message = body.Length > 512 ? body[..512] : body;
-        TimeSpan? retryAfter = retryAfterHeader;
+        var message = $"LSE returned HTTP {status}.";
+        TimeSpan? retryAfter = retryAfterHeader < TimeSpan.Zero ? TimeSpan.Zero : retryAfterHeader;
         string? requiredPlan = null;
         try
         {
@@ -52,16 +54,27 @@ public sealed class LseException : Exception
                     code = c.GetString()!;
                 if (root.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String)
                     message = m.GetString()!;
-                if (root.TryGetProperty("retry_after", out var r) && r.ValueKind == JsonValueKind.Number)
-                    retryAfter = TimeSpan.FromSeconds(r.GetDouble());
+                if (retryAfter is null && root.TryGetProperty("retry_after", out var r)
+                    && r.ValueKind == JsonValueKind.Number && r.TryGetDouble(out var seconds)
+                    && seconds is >= 0 and <= int.MaxValue)
+                    retryAfter = TimeSpan.FromSeconds(seconds);
                 if (root.TryGetProperty("required_plan", out var p) && p.ValueKind == JsonValueKind.Object)
                     requiredPlan = p.GetRawText();
             }
         }
         catch (JsonException)
         {
-            // Not JSON (a proxy error page): keep the raw body as the message.
+            // A proxy error page is not safe to surface as an exception message.
         }
-        return new LseException(status, code, message, retryAfter, requiredPlan);
+        return new LseException(status, Redact(code, secret, 128),
+            Redact(message, secret, 512), retryAfter,
+            requiredPlan is null ? null : Redact(requiredPlan, secret, 64 * 1024));
+    }
+
+    internal static string Redact(string value, string? secret, int limit)
+    {
+        if (!string.IsNullOrEmpty(secret))
+            value = value.Replace(secret, "[redacted]", StringComparison.Ordinal);
+        return value.Length > limit ? value[..limit] : value;
     }
 }

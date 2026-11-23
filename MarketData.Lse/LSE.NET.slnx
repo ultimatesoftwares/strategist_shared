@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="LSE.NET.csproj" />
+  <Project Path="tests/LSE.NET.Tests.csproj" />
+  <Project Path="examples/Tui/LSE.NET.Tui.csproj" />
+</Solution>

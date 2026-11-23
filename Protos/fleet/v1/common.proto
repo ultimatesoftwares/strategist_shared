@@ -193,6 +193,14 @@ message PendingOrder {
 }
 
 // Deal is a historical account transaction (fill, balance operation, ...).
+enum DealEntry {
+  DEAL_ENTRY_UNSPECIFIED = 0;
+  DEAL_ENTRY_OPEN = 1;
+  DEAL_ENTRY_CLOSE = 2;
+  DEAL_ENTRY_REVERSE = 3;
+  DEAL_ENTRY_CLOSE_BY = 4;
+}
+
 message Deal {
   uint64 ticket = 1;
   uint64 order_ticket = 2;     // order that produced this deal; 0 for balance ops
@@ -207,6 +215,8 @@ message Deal {
   string comment = 11;
   int64 magic_number = 12;
   int64 time_unix_ms = 13;
+  DealEntry entry = 14;       // unspecified for older connectors
+  optional double fee = 15;   // MT5 DEAL_FEE; absent on older connectors
 }
 
 // BookSide labels one side of the order book.

@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using Strategist.TimeSeries;
 
 namespace Strategist.Infrastructure.TimeSeries;
@@ -10,12 +8,15 @@ public sealed record FetchJobState(
     string JobId, string Kind, string Venue, string Symbol, string? Timeframe,
     DateTime From, DateTime To,
     int TotalChunks, int CompletedChunks, int FailedChunks, long RowsWritten,
-    string Status, DateTime? ChunkFrom, DateTime? ChunkTo, DateTime UpdatedAt);
+    string Status, DateTime? ChunkFrom, DateTime? ChunkTo, DateTime UpdatedAt)
+{
+    public string? LastChunkError { get; init; }
+}
 
 /// <summary>Outcome of a fetch job. Failed chunks never abort the job: they
 /// are collected here so the caller can retry just the holes.</summary>
 public sealed record FetchJobResult(
-    string JobId, int Written, IReadOnlyList<DateRange> FailedRanges)
+    string JobId, long Written, IReadOnlyList<DateRange> FailedRanges)
 {
     public bool Complete => FailedRanges.Count == 0;
 }
@@ -36,7 +37,7 @@ public sealed partial class QuestDb
         string kind, string venue, string symbol, string? timeframe,
         DateRange range, RangeUnit chunkUnit, string? callerJobId,
         Func<DateRange, CancellationToken, Task<int>> microtask,
-        CancellationToken ct)
+        CancellationToken ct, Func<Exception, bool>? stopOnError = null)
     {
         // Callers that track the job elsewhere (e.g. the backtest slave's
         // provision mirror) supply their own id so states correlate.
@@ -45,11 +46,15 @@ public sealed partial class QuestDb
         var written = 0L;
         var completed = 0;
         var failed = new List<DateRange>();
+        string? lastChunkError = null;
 
         FetchJobState Snapshot(string status, DateRange? current = null) => new(
             jobId, kind, venue, symbol, timeframe, range.From, range.To,
             chunks.Count, completed, failed.Count, written, status,
-            current?.From, current?.To, DateTime.UtcNow);
+            current?.From, current?.To, DateTime.UtcNow)
+        {
+            LastChunkError = lastChunkError,
+        };
 
         await PublishJobStateAsync(Snapshot("running"), ct);
 
@@ -69,6 +74,11 @@ public sealed partial class QuestDb
                     await PublishJobStateAsync(Snapshot("cancelled", chunk), CancellationToken.None);
                     throw;
                 }
+                catch (Exception ex) when (stopOnError?.Invoke(ex) == true)
+                {
+                    // This chunk was not processed; leave the last published checkpoint intact.
+                    throw;
+                }
                 catch (Exception ex) when (attempt < MaxAttempts)
                 {
                     _logger.LogWarning(ex,
@@ -81,6 +91,7 @@ public sealed partial class QuestDb
                     // Fault tolerance: record the hole and move on — the rest
                     // of the range still lands; the caller can retry the holes.
                     failed.Add(chunk);
+                    lastChunkError = ex.Message;
                     _logger.LogError(ex,
                         "questdb job {JobId}: chunk {Chunk} failed {Max} times, skipping",
                         jobId, chunk, MaxAttempts);
@@ -100,7 +111,7 @@ public sealed partial class QuestDb
         _logger.LogInformation(
             "questdb job {JobId}: {Status} — {Written} rows, {Completed}/{Total} chunks ({Failed} failed)",
             jobId, final, written, completed, chunks.Count, failed.Count);
-        return new FetchJobResult(jobId, (int)written, failed);
+        return new FetchJobResult(jobId, written, failed);
     }
 
     /// <summary>Raises the in-process job-state event (the old best-effort

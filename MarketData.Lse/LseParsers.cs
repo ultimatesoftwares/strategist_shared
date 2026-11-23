@@ -3,7 +3,7 @@ using System.Globalization;
 using Parquet;
 using Parquet.Schema;
 
-namespace MarketData.Lse;
+namespace LSE.NET;
 
 /// <summary>
 /// Decoders of LSE export files. Candles are `time, open, high, low, close,
@@ -15,10 +15,10 @@ internal static class LseParsers
 {
     // ---- CSV ----
 
-    public static List<LseCandle> ParseCandlesCsv(ReadOnlySpan<byte> bytes)
+    public static List<LseCandle> ParseCandlesCsv(ReadOnlySpan<byte> bytes, CancellationToken ct = default)
     {
         var rows = new List<LseCandle>();
-        foreach (var fields in CsvRows(bytes, out var col))
+        foreach (var fields in CsvRows(bytes, ["time", "open", "high", "low", "close", "volume", "trades"], ct, out var col))
             rows.Add(new LseCandle(
                 ParseUtcTime(fields[col["time"]]),
                 ParseDouble(fields[col["open"]]),
@@ -26,81 +26,112 @@ internal static class LseParsers
                 ParseDouble(fields[col["low"]]),
                 ParseDouble(fields[col["close"]]),
                 ParseDouble(fields[col["volume"]]),
-                (long)ParseDouble(fields[col["trades"]])));
+                long.Parse(fields[col["trades"]], CultureInfo.InvariantCulture)));
         return rows;
     }
 
-    public static List<LseTrade> ParseTradesCsv(ReadOnlySpan<byte> bytes)
+    public static List<LseTrade> ParseTradesCsv(ReadOnlySpan<byte> bytes, CancellationToken ct = default)
     {
         var rows = new List<LseTrade>();
-        foreach (var fields in CsvRows(bytes, out var col))
+        foreach (var fields in CsvRows(bytes, ["time", "price", "size"], ct, out var col))
             rows.Add(new LseTrade(
                 ParseUtcTime(fields[col["time"]]),
                 ParseDouble(fields[col["price"]]),
                 ParseDouble(fields[col["size"]]),
-                col.TryGetValue("kind", out var k) && k < fields.Count ? fields[k] : ""));
+                col.TryGetValue("kind", out var k) ? fields[k] : ""));
+        return rows;
+    }
+
+    internal static IReadOnlyList<IReadOnlyDictionary<string, string?>> ParseRowsCsv(ReadOnlySpan<byte> bytes,
+        CancellationToken ct)
+    {
+        var rows = new List<IReadOnlyDictionary<string, string?>>();
+        foreach (var fields in CsvRows(bytes, [], ct, out var columns))
+            rows.Add(columns.ToDictionary(column => column.Key, column =>
+                fields[column.Value] is "" or @"\N" ? null : fields[column.Value], StringComparer.OrdinalIgnoreCase));
         return rows;
     }
 
     /// <summary>Parses the CSV into rows of fields, mapping the header into
     /// <paramref name="columns"/> (lower-cased name to index).</summary>
-    private static List<List<string>> CsvRows(ReadOnlySpan<byte> bytes, out Dictionary<string, int> columns)
+    private static IEnumerable<List<string>> CsvRows(ReadOnlySpan<byte> bytes, string[] required,
+        CancellationToken ct, out Dictionary<string, int> columns)
     {
-        var text = System.Text.Encoding.UTF8.GetString(bytes);
-        var records = ParseCsv(text);
         columns = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        if (records.Count == 0)
-            return records;
-        var header = records[0];
-        for (var i = 0; i < header.Count; i++)
-            columns[header[i].Trim()] = i;
-        records.RemoveAt(0);
-        return records;
+        return ReadRows(System.Text.Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF'), columns, required, ct);
     }
 
-    /// <summary>A minimal CSV reader: quoted fields, doubled quotes, CRLF or
-    /// LF row ends. Skips blank rows.</summary>
-    internal static List<List<string>> ParseCsv(string text)
+    private static IEnumerable<List<string>> ReadRows(string text, Dictionary<string, int> columns,
+        string[] required, CancellationToken ct)
     {
-        var records = new List<List<string>>();
+        using var records = EnumerateCsv(text, ct).GetEnumerator();
+        if (!records.MoveNext())
+            throw new LseException(0, "csv-schema", "The CSV has no header.");
+        var header = records.Current;
+        for (var i = 0; i < header.Count; i++)
+            if (!columns.TryAdd(header[i].Trim(), i))
+                throw new LseException(0, "csv-schema", "The CSV repeats a column name.");
+        if (required.Any(name => !columns.ContainsKey(name)))
+            throw new LseException(0, "csv-schema", "The CSV is missing a required column.");
+        while (records.MoveNext())
+        {
+            if (records.Current.Count != header.Count)
+                throw new LseException(0, "csv-schema", "A CSV row does not match the header.");
+            yield return records.Current;
+        }
+    }
+
+    private static IEnumerable<List<string>> EnumerateCsv(string text, CancellationToken ct)
+    {
         var fields = new List<string>();
         var field = new System.Text.StringBuilder();
         var quoted = false;
+        var closedQuote = false;
         var any = false;
         for (var i = 0; i < text.Length; i++)
         {
+            if ((i & 4095) == 0)
+                ct.ThrowIfCancellationRequested();
             var c = text[i];
             if (quoted)
             {
                 if (c == '"')
                 {
                     if (i + 1 < text.Length && text[i + 1] == '"') { field.Append('"'); i++; }
-                    else quoted = false;
+                    else { quoted = false; closedQuote = true; }
                 }
                 else field.Append(c);
                 continue;
             }
+            if (closedQuote && c is not (',' or '\r' or '\n'))
+                throw new LseException(0, "csv-schema", "Unexpected data after a quoted CSV field.");
             switch (c)
             {
                 case '"':
+                    if (field.Length > 0)
+                        throw new LseException(0, "csv-schema", "Unexpected quote in a CSV field.");
                     quoted = true;
                     any = true;
                     break;
                 case ',':
                     fields.Add(field.ToString());
                     field.Clear();
+                    closedQuote = false;
                     any = true;
                     break;
                 case '\r':
-                    break;
+                    if (i + 1 < text.Length && text[i + 1] == '\n')
+                        i++;
+                    goto case '\n';
                 case '\n':
                     if (any || field.Length > 0)
                     {
                         fields.Add(field.ToString());
-                        records.Add(fields);
+                        yield return fields;
                         fields = [];
                         field.Clear();
                         any = false;
+                        closedQuote = false;
                     }
                     break;
                 default:
@@ -109,29 +140,16 @@ internal static class LseParsers
                     break;
             }
         }
+        if (quoted)
+            throw new LseException(0, "csv-schema", "The CSV ends inside a quoted field.");
         if (any || field.Length > 0)
         {
             fields.Add(field.ToString());
-            records.Add(fields);
+            yield return fields;
         }
-        return records;
     }
 
     // ---- Parquet ----
-
-    public static async Task<List<LseCandle>> ParseCandlesParquetAsync(
-        byte[] bytes, CancellationToken ct = default)
-    {
-        var rows = new List<LseCandle>();
-        await ReadParquetAsync(bytes,
-            ["time", "open", "high", "low", "close", "volume", "trades"],
-            cells => rows.Add(new LseCandle(
-                ToUtcTime(cells[0]), ToDouble(cells[1]), ToDouble(cells[2]),
-                ToDouble(cells[3]), ToDouble(cells[4]), ToDouble(cells[5]),
-                (long)ToDouble(cells[6]))),
-            ct);
-        return rows;
-    }
 
     public static async Task<List<LseTrade>> ParseTradesParquetAsync(
         byte[] bytes, CancellationToken ct = default)
@@ -153,14 +171,14 @@ internal static class LseParsers
         byte[] bytes, string[] names, Action<object?[]> onRow, CancellationToken ct)
     {
         using var stream = new MemoryStream(bytes);
-        using var reader = await ParquetReader.CreateAsync(stream, cancellationToken: ct);
+        using var reader = await ParquetReader.CreateAsync(stream, cancellationToken: ct).ConfigureAwait(false);
         var schema = reader.Schema.GetDataFields();
         var fields = new DataField?[names.Length];
         for (var i = 0; i < names.Length; i++)
         {
             fields[i] = schema.FirstOrDefault(
                 f => string.Equals(f.Name, names[i], StringComparison.OrdinalIgnoreCase));
-            if (fields[i] is null && i == 0)
+            if (fields[i] is null && names[i] != "kind")
                 throw new LseException(0, "parquet-schema",
                     $"the Parquet file has no '{names[i]}' column (columns: {string.Join(", ", schema.Select(f => f.Name))})");
         }
@@ -169,19 +187,22 @@ internal static class LseParsers
         {
             using var group = reader.OpenRowGroupReader(g);
             var columns = new Array?[names.Length];
-            var count = 0;
+            var count = checked((int)group.RowCount);
             for (var i = 0; i < names.Length; i++)
             {
                 if (fields[i] is not { } field)
                     continue;
-                var column = await group.ReadColumnAsync(field, ct);
+                var column = await group.ReadColumnAsync(field, ct).ConfigureAwait(false);
                 columns[i] = column.Data;
-                count = Math.Max(count, column.Data.Length);
+                if (column.Data.Length != count)
+                    throw new LseException(0, "parquet-schema", "A Parquet column does not match the row group length.");
             }
             for (var row = 0; row < count; row++)
             {
+                if ((row & 4095) == 0)
+                    ct.ThrowIfCancellationRequested();
                 for (var i = 0; i < names.Length; i++)
-                    cells[i] = columns[i] is { } data && row < data.Length ? data.GetValue(row) : null;
+                    cells[i] = columns[i]?.GetValue(row);
                 onRow(cells);
             }
         }
@@ -189,7 +210,7 @@ internal static class LseParsers
 
     // ---- Cell conversions ----
 
-    internal static DateTime ToUtcTime(object? value) => value switch
+    private static DateTime ToUtcTime(object? value) => value switch
     {
         DateTime dt => dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc),
         DateTimeOffset dto => dto.UtcDateTime,
@@ -199,7 +220,7 @@ internal static class LseParsers
             $"cannot read a {value.GetType().Name} as a time"),
     };
 
-    internal static double ToDouble(object? value) => value switch
+    private static double ToDouble(object? value) => value switch
     {
         null => 0,
         double d => d,
@@ -209,7 +230,7 @@ internal static class LseParsers
         _ => Convert.ToDouble(value, CultureInfo.InvariantCulture),
     };
 
-    internal static double ParseDouble(string s) =>
+    private static double ParseDouble(string s) =>
         s.Length == 0 || s == @"\N"
             ? 0
             : double.Parse(s, NumberStyles.Float, CultureInfo.InvariantCulture);
@@ -225,6 +246,8 @@ internal static class LseParsers
         s = s.Trim();
         if (s.EndsWith('Z'))
             s = s[..^1];
+        else if (s.EndsWith("+00:00", StringComparison.Ordinal))
+            s = s[..^6];
         if (s.Length > 10 && s[10] == 'T')
             s = s[..10] + " " + s[11..];
         var fractionTicks = 0L;
@@ -232,10 +255,12 @@ internal static class LseParsers
         if (dot >= 0)
         {
             var fraction = s[(dot + 1)..];
+            if (fraction.Length is < 1 or > 9 || !fraction.All(char.IsAsciiDigit))
+                throw new FormatException("Invalid fractional timestamp.");
             s = s[..dot];
             if (fraction.Length > 7)
                 fraction = fraction[..7];
-            fractionTicks = long.Parse(fraction, CultureInfo.InvariantCulture)
+            fractionTicks = long.Parse(fraction, NumberStyles.None, CultureInfo.InvariantCulture)
                 * (long)Math.Pow(10, 7 - fraction.Length);
         }
         var baseTime = DateTime.ParseExact(s,

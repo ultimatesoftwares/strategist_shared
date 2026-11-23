@@ -46,6 +46,7 @@ public sealed class EngineHost
     private readonly Queue<OrderCommand> _pendingCommands = new();
     // Written on the engine thread, safe to read from any thread.
     private readonly ConcurrentDictionary<uint, EngineSnapshot> _snapshots = new();
+    private readonly ConcurrentDictionary<uint, BarDecisionSnapshot> _barDecisions = new();
     // Last gate-rejection reason per symbol (engine thread only), to log
     // persistent conditions (market closed, kill switch) once instead of per
     // order. Cleared when a placement passes the gate again.
@@ -53,6 +54,11 @@ public sealed class EngineHost
     private ulong _nextManualOrderId = ManualOrderIdBase;
 
     public readonly record struct EngineSnapshot(TopOfBook TopOfBook, long Position);
+    public sealed record BarDecisionSnapshot(
+        Bar Bar, StrategyDecision Decision, DateTimeOffset ObservedUtc, string? OrderOutcome);
+
+    public BarDecisionSnapshot? GetBarDecision(uint symbolId) =>
+        _barDecisions.GetValueOrDefault(symbolId);
 
     public long OrdersPlaced { get; private set; }
     public long OrdersCancelled { get; private set; }
@@ -97,6 +103,11 @@ public sealed class EngineHost
     /// </summary>
     public event Action<DecisionEvent>? DecisionMade;
 
+    /// <summary>Fired on the engine thread after a bar strategy evaluated a
+    /// closed bar: symbol, bar, the strategy's decision, and whether it
+    /// emitted orders.</summary>
+    public event Action<Bar, StrategyDecision, bool>? BarEvaluated;
+
     public EngineHost(
         TradingEngine engine,
         IBrokerAdapter broker,
@@ -139,8 +150,24 @@ public sealed class EngineHost
                     case BarEvent bar:
                         _engine.PublishBar(bar.Bar);
                         UpdateSnapshot(bar.Bar.SymbolId);
+                        var hasDecision = _engine.TryGetLastDecision(out var barDecision);
+                        if (BarEvaluated is not null && hasDecision)
+                            BarEvaluated(bar.Bar, barDecision, _pendingCommands.Count > 0);
                         NotifyDecision(
                             bar.Bar.SymbolId, (ulong)bar.Bar.TimeUnixMs * 1_000_000);
+                        var placedBefore = OrdersPlaced;
+                        var blockedBefore = OrdersRejectedByGate;
+                        DrainCommands();
+                        if (hasDecision)
+                        {
+                            var outcome = OrdersRejectedByGate > blockedBefore
+                                ? $"Blocked: {_lastGateReason.GetValueOrDefault(bar.Bar.SymbolId) ?? "risk gate"}"
+                                : OrdersPlaced > placedBefore ? "Order routed; check routing mode and latest order status."
+                                : barDecision.Reason is "Long entry signal." or "Short entry signal." or "Exit signal." or "Exit signal: reversion, stop or maximum hold."
+                                    ? "No order sent; check the engine risk limits and available quote."
+                                    : null;
+                            _barDecisions[bar.Bar.SymbolId] = new(bar.Bar, barDecision, DateTimeOffset.UtcNow, outcome);
+                        }
                         break;
                     case ExecutionEvent ex:
                         _engine.PublishExecution(ex.Report);
@@ -210,7 +237,10 @@ public sealed class EngineHost
                     }
                     _lastGateReason.Remove(p.SymbolId);
                     OrdersPlaced++;
-                    _broker.PlaceOrder(p);
+                    if (_broker is IPositionAwareBroker positionAware)
+                        positionAware.PlaceOrder(p, _engine.GetPosition(p.SymbolId));
+                    else
+                        _broker.PlaceOrder(p);
                     OrderRouted?.Invoke(p);
                     break;
                 case OrderCommand.Cancel c:
@@ -276,7 +306,10 @@ public sealed class EngineHost
         {
             var place = new OrderCommand.Place(orderId, symbolId, side, price, qty);
             OrdersPlaced++;
-            _broker.PlaceOrder(place);
+            if (_broker is IPositionAwareBroker positionAware)
+                positionAware.PlaceOrder(place, _engine.GetPosition(symbolId));
+            else
+                _broker.PlaceOrder(place);
             OrderRouted?.Invoke(place);
             return orderId;
         });

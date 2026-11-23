@@ -26,21 +26,22 @@ public sealed partial class QuestDb
     /// <summary>
     /// Fetches bars from a venue ("ctrader", "metatrader" or "alpaca")
     /// into the store as a fault-tolerant job:
-    /// the range is split into month microtasks, each retried independently
+    /// the range is split into calendar microtasks (monthly by default), each retried independently
     /// and throttled between calls (rate limits), with state raised via
     /// the in-process JobStateChanged event. A failed chunk is skipped and
     /// reported in the result, never fatal.
     /// </summary>
     public async Task<FetchJobResult> FetchBarsAsync(
         string venue, string symbol, string timeframe, DateRange range,
-        CancellationToken ct = default, string? jobId = null)
+        CancellationToken ct = default, string? jobId = null, RangeUnit chunkUnit = RangeUnit.Month,
+        Func<Exception, bool>? stopOnError = null)
     {
         var source = Source(venue);
         var result = await RunFetchJobAsync("bars", venue, symbol, timeframe,
-            range, RangeUnit.Month, jobId,
+            range, chunkUnit, jobId,
             async (chunk, token) => await WriteBarsAsync(
                 await source.FetchBarsAsync(symbol, timeframe, chunk, token), token),
-            ct);
+            ct, stopOnError);
         _logger.LogInformation("questdb: fetched {Count} {Tf} bars of {Symbol} from {Venue} ({Range})",
             result.Written, timeframe, symbol, venue, range);
         return result;
@@ -51,14 +52,14 @@ public sealed partial class QuestDb
     /// retried, throttled and state-published like <see cref="FetchBarsAsync"/>.</summary>
     public async Task<FetchJobResult> FetchTicksAsync(
         string venue, string symbol, DateRange range, CancellationToken ct = default,
-        string? jobId = null)
+        string? jobId = null, Func<Exception, bool>? stopOnError = null)
     {
         var source = Source(venue);
         var result = await RunFetchJobAsync("ticks", venue, symbol, null,
             range, RangeUnit.Day, jobId,
             async (chunk, token) => await WriteTicksAsync(
                 await source.FetchTicksAsync(symbol, chunk, token), token),
-            ct);
+            ct, stopOnError);
         _logger.LogInformation("questdb: fetched {Count} ticks of {Symbol} from {Venue} ({Range})",
             result.Written, symbol, venue, range);
         return result;

@@ -29,7 +29,7 @@ public sealed partial class QuestDb
         var rows = await QueryAsync(
             "select ts, venue, bid, ask, last, last_size, seq from ticks" +
             $" where symbol = '{Escape(symbol)}'{venueFilter}" +
-            $" and ts >= '{Iso(range.From)}' and ts < '{Iso(range.To)}' order by ts",
+            $" and ts >= '{Iso(range.From)}' and ts < '{Iso(range.To)}' order by ts, seq",
             ct);
         return [.. rows.Select(r => new Tick(symbol, r[1].GetString() ?? "", Ts(r[0]),
             r[2].GetDouble(), r[3].GetDouble(), r[4].GetDouble(), r[5].GetDouble(), r[6].GetInt64()))];

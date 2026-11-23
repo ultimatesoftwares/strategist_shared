@@ -1,4 +1,4 @@
-namespace MarketData.Lse;
+namespace LSE.NET;
 
 /// <summary>
 /// A sliding-window rate limiter: at most <c>limit</c> acquisitions per
@@ -7,7 +7,7 @@ namespace MarketData.Lse;
 /// </summary>
 internal sealed class RateGate(int limit, TimeSpan window)
 {
-    private readonly Queue<DateTime> _stamps = new();
+    private readonly Queue<long> _stamps = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public async Task WaitAsync(CancellationToken ct = default)
@@ -18,15 +18,15 @@ internal sealed class RateGate(int limit, TimeSpan window)
             await _lock.WaitAsync(ct);
             try
             {
-                var now = DateTime.UtcNow;
-                while (_stamps.Count > 0 && now - _stamps.Peek() >= window)
+                var now = System.Diagnostics.Stopwatch.GetTimestamp();
+                while (_stamps.Count > 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_stamps.Peek(), now) >= window)
                     _stamps.Dequeue();
                 if (_stamps.Count < limit)
                 {
                     _stamps.Enqueue(now);
                     return;
                 }
-                wait = _stamps.Peek() + window - now;
+                wait = window - System.Diagnostics.Stopwatch.GetElapsedTime(_stamps.Peek(), now);
             }
             finally
             {

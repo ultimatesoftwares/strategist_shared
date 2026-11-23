@@ -563,6 +563,25 @@ namespace Server.Migrations
                     b.ToTable("instruments", (string)null);
                 });
 
+            modelBuilder.Entity("Server.Models.InstrumentArtwork", b =>
+                {
+                    b.Property<Guid>("InstrumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("BaseIcon")
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("Icon")
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("QuoteIcon")
+                        .HasColumnType("bytea");
+
+                    b.HasKey("InstrumentId");
+
+                    b.ToTable("instrument_artwork", (string)null);
+                });
+
             modelBuilder.Entity("Server.Models.InstrumentCatalogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -644,11 +663,9 @@ namespace Server.Migrations
 
             modelBuilder.Entity("Server.Models.ModelDecision", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Account")
                         .IsRequired()
@@ -704,14 +721,29 @@ namespace Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BrokerAccountKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BrokerOrderTicket")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("BrokerPositionTicket")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<long?>("DecisionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid?>("DecisionId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("ExecutionTs")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("IsPositionClose")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("OrderId")
                         .IsRequired()
@@ -726,6 +758,10 @@ namespace Server.Migrations
 
                     b.Property<double?>("RealizedPnl")
                         .HasColumnType("double precision");
+
+                    b.Property<string>("RealizedPnlSource")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("RejectReason")
                         .HasMaxLength(300)
@@ -759,6 +795,10 @@ namespace Server.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DecisionId");
+
+                    b.HasIndex("VenueId", "BrokerOrderTicket");
+
+                    b.HasIndex("VenueId", "BrokerPositionTicket");
 
                     b.ToTable("orders", (string)null);
                 });
@@ -1069,11 +1109,44 @@ namespace Server.Migrations
                     b.ToTable("provision_jobs", (string)null);
                 });
 
+            modelBuilder.Entity("Server.Models.StrategyDeployment", b =>
+                {
+                    b.Property<string>("AccountKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("AccountKey");
+
+                    b.HasIndex("ModelId");
+
+                    b.ToTable("strategy_deployments", (string)null);
+                });
+
             modelBuilder.Entity("Server.Models.StrategyModel", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("all");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -1083,10 +1156,25 @@ namespace Server.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
+                    b.Property<bool>("Enabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("InstrumentIds")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("MinBalanceUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<long?>("OrderQty")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
@@ -1101,9 +1189,44 @@ namespace Server.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("Venues")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
                     b.HasKey("Id");
 
                     b.ToTable("strategy_models", (string)null);
+                });
+
+            modelBuilder.Entity("Server.Models.TradingAccountProfile", b =>
+                {
+                    b.Property<string>("AccountKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("AccountType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AccountKey");
+
+                    b.ToTable("trading_account_profiles", (string)null);
                 });
 
             modelBuilder.Entity("Server.Models.UserInformation", b =>
@@ -1235,6 +1358,15 @@ namespace Server.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Server.Models.InstrumentArtwork", b =>
+                {
+                    b.HasOne("Server.Models.Instrument", null)
+                        .WithOne()
+                        .HasForeignKey("Server.Models.InstrumentArtwork", "InstrumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Server.Models.InstrumentCatalogEntry", b =>
                 {
                     b.HasOne("Server.Models.Instrument", "MappedToInstrument")
@@ -1354,6 +1486,15 @@ namespace Server.Migrations
                     b.Navigation("LinkedBy");
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Server.Models.StrategyDeployment", b =>
+                {
+                    b.HasOne("Server.Models.StrategyModel", null)
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Server.Models.UserInformation", b =>

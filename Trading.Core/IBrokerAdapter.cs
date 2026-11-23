@@ -25,9 +25,15 @@ public interface IBrokerAdapter : IDisposable
     void CancelOrder(OrderCommand.Cancel cancel);
 }
 
+/// <summary>Broker routing that verifies the engine's position against broker truth.</summary>
+public interface IPositionAwareBroker
+{
+    void PlaceOrder(OrderCommand.Place order, long expectedPosition);
+}
+
 /// <summary>
 /// Optional broker capability: closed OHLC bars for subscribed symbols
-/// (feeding bar-driven strategies, e.g. <see cref="StrategyKind.Onnx"/>).
+/// (feeding bar-driven strategies, e.g. <see cref="StrategyKind.Ml"/>).
 /// Adapters without a native bar feed can aggregate bars from their tick
 /// stream. Raised on whatever thread the SDK uses — the host marshals onto
 /// the engine thread.
@@ -35,6 +41,19 @@ public interface IBrokerAdapter : IDisposable
 public interface IBarSource
 {
     event Action<Bar>? Bars;
+}
+
+/// <summary>
+/// Optional broker capability: recent closed bars from the venue's own
+/// history, used to warm bar-driven strategies at startup instead of
+/// waiting for live bars to accumulate.
+/// </summary>
+public interface IBarHistorySource
+{
+    /// <summary>Up to <paramref name="count"/> most recent closed bars at the
+    /// adapter's live bar interval, oldest first, in engine fixed point.</summary>
+    Task<IReadOnlyList<Bar>> RecentBarsAsync(
+        string brokerSymbol, uint engineSymbolId, int count, CancellationToken ct = default);
 }
 
 /// <summary>

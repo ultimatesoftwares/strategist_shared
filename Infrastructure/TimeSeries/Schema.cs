@@ -17,15 +17,16 @@ public sealed partial class QuestDb
             "DEDUP UPSERT KEYS(ts, symbol, tf)",
             "CREATE TABLE IF NOT EXISTS ticks (symbol SYMBOL, venue SYMBOL, bid DOUBLE, ask DOUBLE, " +
             "last DOUBLE, last_size DOUBLE, seq LONG, ts TIMESTAMP) TIMESTAMP(ts) PARTITION BY DAY WAL " +
-            "DEDUP UPSERT KEYS(ts, symbol, venue)",
+            "DEDUP UPSERT KEYS(ts, symbol, venue, seq)",
+            "ALTER TABLE ticks DEDUP ENABLE UPSERT KEYS(ts, symbol, venue, seq)",
         ];
         foreach (var sql in statements)
         {
             using var response = await _http.GetAsync(
                 $"{_baseUrl}/exec?query={Uri.EscapeDataString(sql)}", ct);
             if (!response.IsSuccessStatusCode)
-                _logger.LogWarning("QuestDB table setup failed ({Sql}): {Detail}",
-                    sql, await response.Content.ReadAsStringAsync(ct));
+                throw new InvalidOperationException(
+                    $"QuestDB table setup failed ({sql}): {await response.Content.ReadAsStringAsync(ct)}");
         }
         _tablesEnsured = true;
     }

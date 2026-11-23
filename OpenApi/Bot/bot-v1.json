@@ -825,62 +825,6 @@
           }
         }
       }
-    },
-    "/api/venues/ctrader/oauth/start": {
-      "get": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "Start the cTrader OAuth flow: redirects the browser to the cTrader\nconsent page. After the user approves, cTrader redirects back to\n.../oauth/callback, which exchanges the code and captures every\naccount the token can trade as a venue.",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/venues/ctrader/oauth/callback": {
-      "get": {
-        "tags": [
-          "Venues"
-        ],
-        "summary": "cTrader OAuth redirect target: validates the CSRF state, exchanges the\nauthorization code for tokens, discovers every trading account the\ntoken covers, and upserts one venue per account (new venues start\nenabled; existing ones get their tokens rotated). Returns a small HTML\npage since the browser lands here directly.",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "error",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "error_description",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
     }
   },
   "components": {

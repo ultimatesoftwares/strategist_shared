@@ -80,18 +80,25 @@ namespace Server.Models
 
         [MaxLength(100)] public string OrderId { get; set; } = "";
 
+        /// <summary>Broker-issued identifiers, when supplied by the execution adapter.</summary>
+        [MaxLength(32)] public string? BrokerOrderTicket { get; set; }
+        [MaxLength(32)] public string? BrokerPositionTicket { get; set; }
+        [MaxLength(256)] public string? BrokerAccountKey { get; set; }
+
         /// <summary>Strategy instrument the order traded.</summary>
         [MaxLength(100)]
         public string Symbol { get; set; } = "";
 
         [MaxLength(10)] public string Side { get; set; } = "";
+        /// <summary>True only for a confirmed position-closing execution; null when unknown.</summary>
+        public bool? IsPositionClose { get; set; }
         public double Quantity { get; set; }
         [Column(TypeName = "decimal(10,2)")] public decimal Price { get; set; }
 
-        /// <summary>Realized PnL of the close this fill executed (account
-        /// currency, engine close-time marks); null for opening fills,
-        /// rejections and cancellations — nothing was realized.</summary>
+        /// <summary>Realized PnL; legacy values may be unverified engine estimates.
+        /// Consult RealizedPnlSource before presenting this as broker data.</summary>
         public double? RealizedPnl { get; set; }
+        [MaxLength(32)] public string? RealizedPnlSource { get; set; }
 
         /// <summary>Sanitized broker refusal for rejected orders (e.g.
         /// "Rejected: NOT_ENOUGH_MONEY: insufficient margin"); null for
@@ -102,7 +109,7 @@ namespace Server.Models
         /// <summary>The model_decisions row whose signal caused this order
         /// (strategy path only); null for manual and external fills.
         /// SetNull on decision delete so the order row survives.</summary>
-        public long? DecisionId { get; set; }
+        public Guid? DecisionId { get; set; }
         public ModelDecision? Decision { get; set; }
 
         public DateTime ExecutionTs { get; set; } = DateTime.UtcNow;
@@ -186,6 +193,14 @@ namespace Server.Models
         public bool IsTradable { get; set; } = true;
     }
 
+    public sealed class InstrumentArtwork
+    {
+        public Guid InstrumentId { get; set; }
+        public byte[]? Icon { get; set; }
+        public byte[]? BaseIcon { get; set; }
+        public byte[]? QuoteIcon { get; set; }
+    }
+
 
     /// <summary>One strategy decision that emitted orders (table
     /// <c>model_decisions</c>). Written by the bot's OrderLog from the Rust
@@ -196,7 +211,7 @@ namespace Server.Models
     [Index(nameof(Account), nameof(EventTs))]
     public class ModelDecision
     {
-        public long Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         /// <summary>Trading account identity (e.g. MT login, cTrader account id).</summary>
         [MaxLength(100)]
@@ -212,7 +227,8 @@ namespace Server.Models
         [MaxLength(100)]
         public string Symbol { get; set; } = "";
 
-        /// <summary>Strategy descriptor, e.g. "imbalance_quoter" or "onnx:models/x.onnx".</summary>
+        /// <summary>Strategy descriptor, e.g. "ml:models/x.zip" (historical rows may
+        /// carry the retired "imbalance_quoter").</summary>
         [MaxLength(200)]
         public string Strategy { get; set; } = "";
 
@@ -299,8 +315,8 @@ namespace Server.Models
     }
 
     /// <summary>
-    /// Registered ONNX strategy model (table <c>strategy_models</c>): the
-    /// artifact a strategy project trains and uploads (or a pre-built .onnx
+    /// Registered ML.NET strategy model (table <c>strategy_models</c>): the
+    /// artifact a strategy project trains and uploads (or a pre-built
     /// uploaded directly). The primary key IS the sha256 of the model bytes
     /// (lowercase hex) — re-uploading the same bytes is idempotent, a changed
     /// byte is a new model, and there is no mutable "latest" pointer. The
@@ -333,6 +349,83 @@ namespace Server.Models
         public string StoragePath { get; set; } = "";
 
         public DateTime CreatedAtUtc { get; set; }
+
+        /// <summary>Minimum account balance (USD) a trading account needs
+        /// before this model may be deployed on it; null = no minimum.</summary>
+        public decimal? MinBalanceUsd { get; set; }
+
+        /// <summary>Comma-separated venue providers (ctrader, alpaca, mt4,
+        /// mt5) the model may run on; empty = every venue.</summary>
+        [MaxLength(200)]
+        public string Venues { get; set; } = "";
+
+        /// <summary>Position accounting the model needs: all | netting | hedging.</summary>
+        [MaxLength(16)]
+        public string AccountType { get; set; } = "all";
+
+        /// <summary>Master switch: false stops the model on every account it
+        /// is deployed to (they run the null strategy) while keeping the
+        /// per-account deployments for when it is turned back on.</summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>Order size in engine lots for accounts running this
+        /// model (each venue converts engine lots to its own units); null =
+        /// the bot's fleet-default order size.</summary>
+        public long? OrderQty { get; set; }
+
+        /// <summary>Comma-separated registered instrument IDs; null means all
+        /// mapped instruments, while an empty string disables every instrument.</summary>
+        public string? InstrumentIds { get; set; }
+    }
+
+    /// <summary>
+    /// Per-trading-account model deployment (table <c>strategy_deployments</c>):
+    /// the bot runs <see cref="ModelId"/> on the account named
+    /// <see cref="AccountKey"/> instead of the fleet-default strategy. One
+    /// model per account; no row = fleet default.
+    /// </summary>
+    public class StrategyDeployment
+    {
+        /// <summary>Bot account name, e.g. <c>ctrader:123:live</c>.</summary>
+        [Key]
+        [MaxLength(300)]
+        public string AccountKey { get; set; } = "";
+
+        [MaxLength(64)]
+        public string ModelId { get; set; } = "";
+
+        [MaxLength(256)]
+        public string UpdatedBy { get; set; } = "";
+
+        public DateTime UpdatedAtUtc { get; set; }
+    }
+
+    /// <summary>
+    /// Broker-reported trading-account facts (table <c>trading_account_profiles</c>),
+    /// keyed by the bot account name. Written when the account is onboarded or
+    /// connects: cTrader from ProtoOATrader.accountType, MT4/MT5 from the
+    /// connector hello's margin mode. Model deployment constraints read it.
+    /// </summary>
+    public class TradingAccountProfile
+    {
+        /// <summary>Bot account name, e.g. <c>ctrader:123:live</c> or <c>mt5:42:Broker-Demo</c>.</summary>
+        [Key]
+        [MaxLength(300)]
+        public string AccountKey { get; set; } = "";
+
+        /// <summary>Venue provider: ctrader, mt4, mt5, alpaca, …</summary>
+        [MaxLength(32)]
+        public string Provider { get; set; } = "";
+
+        /// <summary><c>netting</c>, <c>hedging</c> or <c>spread_betting</c>; null when unknown.</summary>
+        [MaxLength(32)]
+        public string? AccountType { get; set; }
+
+        /// <summary>Where the value came from, e.g. <c>ctrader-onboarding</c>, <c>ctrader-connect</c>, <c>mt5-hello</c>.</summary>
+        [MaxLength(64)]
+        public string Source { get; set; } = "";
+
+        public DateTime UpdatedAtUtc { get; set; }
     }
 
     /// <summary>
@@ -666,7 +759,7 @@ namespace Server.Models
         public string EnvironmentJson { get; set; } = "{}";
 
         /// <summary>Start the process automatically when fleetd boots.</summary>
-        public bool AutoStart { get; set; }
+        public bool AutoStart { get; set; } = true;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -31,6 +31,12 @@ public readonly struct StrategyContext(
 /// </summary>
 public interface IStrategy
 {
+    /// <summary>Whether this strategy requires atomic quotes rather than book deltas.</summary>
+    bool RequiresAtomicQuotes => false;
+
+    /// <summary>Invalidate state after a queued quote exceeded its processing deadline.</summary>
+    void OnQuoteGap(in StrategyContext ctx, List<Intent> output) { }
+
     /// <summary>Called after every book update for the affected symbol.</summary>
     void OnBook(in StrategyContext ctx, List<Intent> output);
 
@@ -47,6 +53,19 @@ public interface IStrategy
     /// don't care). Bar strategies keep their own history.
     /// </summary>
     void OnBar(in StrategyContext ctx, in Bar bar, List<Intent> output)
+    {
+    }
+
+    /// <summary>Closed bars a bar strategy needs before its first decision
+    /// (0 = no warm-up). Hosts may pre-feed that much history via
+    /// <see cref="WarmBar"/>.</summary>
+    int WarmupBars => 0;
+
+    /// <summary>
+    /// Fold a historical bar into the strategy's state without trading on
+    /// it (warm-up only, oldest first, before live bars). Default: no-op.
+    /// </summary>
+    void WarmBar(in Bar bar)
     {
     }
 
@@ -77,12 +96,14 @@ public sealed class NullStrategy : IStrategy
 }
 
 /// <summary>
-/// A deliberately simple example strategy: joins the passive side when
-/// top-of-book imbalance is strongly in its favor, and flattens by quoting
-/// out when holding inventory.
+/// RETIRED demo strategy: joins the passive side when top-of-book imbalance
+/// is strongly in its favor, and flattens by quoting out when holding
+/// inventory.
 ///
-/// This is a placeholder for real alpha — the plumbing around it (book,
-/// risk, broker routing) is the production-shaped part.
+/// Not constructible through <see cref="StrategyFactory"/> any more — every
+/// trading strategy must be ML-driven (see <see cref="MlStrategy"/>). Kept
+/// only for research/tests via the explicit
+/// <see cref="TradingEngine(RiskLimits, IStrategy)"/> constructor.
 /// </summary>
 public sealed class ImbalanceQuoter : IStrategy
 {
@@ -151,24 +172,27 @@ public sealed class ImbalanceQuoter : IStrategy
 public static class StrategyFactory
 {
     /// <summary>
-    /// Create the configured strategy. Throws
-    /// <see cref="InvalidOperationException"/> for unknown kinds, missing
+    /// Create the configured strategy. Every trading strategy must be
+    /// ML-driven (<see cref="StrategyKind.Ml"/>/<see cref="StrategyKind.TickMl"/>
+    /// over an ML.NET model.zip); <see cref="StrategyKind.Null"/> is allowed
+    /// as the non-trading placeholder. Throws
+    /// <see cref="InvalidOperationException"/> for the retired non-ML
+    /// <see cref="StrategyKind.ImbalanceQuoter"/>, unknown kinds, missing
     /// model paths, out-of-range thresholds, or model-load failures.
     /// </summary>
     public static IStrategy Create(StrategyConfig config) => config.Kind switch
     {
-        StrategyKind.ImbalanceQuoter => new ImbalanceQuoter
-        {
-            EntryThresholdBps = config.EntryThresholdBps > 0
-                ? config.EntryThresholdBps
-                : ImbalanceQuoter.DefaultEntryThresholdBps,
-            OrderQty = config.OrderQty > 0 ? config.OrderQty : 1,
-        },
-        StrategyKind.Onnx => string.IsNullOrEmpty(config.ModelPath)
-            ? throw new InvalidOperationException("onnx strategy requires a model path")
-            : OnnxStrategy.FromFile(
+        StrategyKind.ImbalanceQuoter => throw new InvalidOperationException(
+            "the imbalanceQuoter strategy was retired: every trading strategy must be ML-driven (ml/tickMl over an ML.NET model.zip)"),
+        StrategyKind.Ml => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("ml strategy requires a model path")
+            : MlStrategy.FromFile(
                 config.ModelPath, config.OrderQty, config.EntryThresholdBps,
                 config.ExitThresholdBps, config.MaxHoldBars),
+        StrategyKind.TickMl => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("tickMl strategy requires a model path")
+            : TickMlStrategy.FromFile(config.ModelPath, config.OrderQty,
+                config.EntryThresholdBps, config.ExitThresholdBps),
         StrategyKind.Null => new NullStrategy(),
         _ => throw new InvalidOperationException($"unknown strategy kind {(uint)config.Kind}"),
     };
