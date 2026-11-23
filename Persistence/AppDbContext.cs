@@ -28,7 +28,6 @@ namespace Server.Data
 
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<CTraderVenue> CTraderVenues => Set<CTraderVenue>();
-        public DbSet<AlpacaVenue> AlpacaVenues => Set<AlpacaVenue>();
         public DbSet<Instrument> Instruments => Set<Instrument>();
         public DbSet<InstrumentArtwork> InstrumentArtworks => Set<InstrumentArtwork>();
 
@@ -79,11 +78,10 @@ namespace Server.Data
                     .HasForeignKey(x => x.DecisionId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
-            // "venues" like its ctrader/alpaca siblings: each row is a
+            // "venues": each row is a
             // broker account credential, not a terminal workload (those live
             // in the fleet hub's registry).
             builder.Entity<CTraderVenue>().ToTable("ctrader_venues");
-            builder.Entity<AlpacaVenue>().ToTable("alpaca_venues");
 
             builder.Entity<Instrument>(e =>
             {

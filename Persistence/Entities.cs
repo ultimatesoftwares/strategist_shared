@@ -70,11 +70,11 @@ namespace Server.Models
 
     public class Order : BaseEntity
     {
-        /// <summary>Venue the order executed on (ctrader/alpaca/mt5 row id);
+        /// <summary>Venue the order executed on (ctrader/mt5 row id);
         /// null for feed-only/unroutable orders.</summary>
         public Guid? VenueId { get; set; }
 
-        /// <summary>Platform kind of the venue ("ctrader", "alpaca", "metatrader").</summary>
+        /// <summary>Platform kind of the venue ("ctrader", "metatrader").</summary>
         [MaxLength(20)]
         public string VenueKind { get; set; } = "";
 
@@ -143,6 +143,33 @@ namespace Server.Models
 
         /// Marks the preferred account for market-data subscriptions.
         public bool IsMarketFeed { get; set; }
+
+        /// <summary>cTrader FIX API credentials (per trader login, from the
+        /// terminal's Settings &gt; FIX API dialog). Captured alongside the
+        /// OAuth tokens (which the server's onboarding flow owns) but
+        /// independent of them: they drive the receive-only FIX fill-capture
+        /// session. An empty host or password means FIX capture is not
+        /// configured.</summary>
+        [MaxLength(200)] public string FixHost { get; set; } = "";
+
+        /// <summary>FIX TRADE port from the same dialog (SSL and plain differ).</summary>
+        public int FixPort { get; set; }
+
+        public bool FixSsl { get; set; } = true;
+
+        /// <summary>SenderCompID (tag 49): "&lt;env&gt;.&lt;brokerUid&gt;.&lt;login&gt;".</summary>
+        [MaxLength(200)] public string FixSenderCompId { get; set; } = "";
+
+        /// <summary>Numeric trader login (tag 553).</summary>
+        [MaxLength(50)] public string FixLogin { get; set; } = "";
+
+        [MaxLength(256)] public string FixPassword { get; set; } = "";
+
+        /// Bumped atomically with every FIX credential change. The engine's
+        /// fill capture (re)starts a session only when this moves — re-saving
+        /// credentials is the operator's acknowledgment that journaled fills
+        /// were reconciled after a capture fault.
+        public long FixCredentialsVersion { get; set; }
     }
 
     public enum AssetClass
@@ -157,26 +184,6 @@ namespace Server.Models
         Futures,
         Options
     }
-
-    /// <summary>
-    /// Alpaca trading venue. Streams its own market data, so each venue instance
-    /// owns an equivalent market feed instance.
-    /// </summary>
-    public class AlpacaVenue : BaseEntity
-    {
-        public Guid UserId { get; set; }
-        public ApplicationUser User { get; set; } = null!;
-
-        [MaxLength(100)] public string AccountId { get; set; } = "";
-        [MaxLength(256)] public string ApiKey { get; set; } = "";
-        [MaxLength(256)] public string ApiSecret { get; set; } = "";
-
-        /// <summary>false = paper trading endpoint.</summary>
-        public bool IsLive { get; set; }
-
-        public bool Enabled { get; set; }
-    }
-
 
     /// <summary>Canonical instrument: venue-agnostic reference data. Where it
     /// trades (and under what venue-native symbol/id) lives on
@@ -217,11 +224,11 @@ namespace Server.Models
         [MaxLength(100)]
         public string Account { get; set; } = "";
 
-        /// <summary>Venue family: "mt4" | "mt5" | "ctrader" | "alpaca" | "sim".</summary>
+        /// <summary>Venue family: "mt4" | "mt5" | "ctrader" | "sim".</summary>
         [MaxLength(20)]
         public string VenueKind { get; set; } = "";
 
-        /// <summary>Venue row id where known (ctrader/alpaca); null for fleet terminals.</summary>
+        /// <summary>Venue row id where known (ctrader); null for fleet terminals.</summary>
         public Guid? VenueId { get; set; }
 
         [MaxLength(100)]
@@ -269,7 +276,7 @@ namespace Server.Models
         [MaxLength(200)]
         public string AccountKey { get; set; } = "";
 
-        /// <summary>Provider segment of the key ("ctrader", "metatrader5", "alpaca").</summary>
+        /// <summary>Provider segment of the key ("ctrader", "metatrader5").</summary>
         [MaxLength(30)]
         public string Provider { get; set; } = "";
 
@@ -317,7 +324,7 @@ namespace Server.Models
     /// <summary>
     /// Registered ML.NET strategy model (table <c>strategy_models</c>): the
     /// artifact a strategy project trains and uploads (or a pre-built
-    /// uploaded directly). The primary key IS the sha256 of the model bytes
+    /// model.zip uploaded directly). The primary key IS the sha256 of the model bytes
     /// (lowercase hex) — re-uploading the same bytes is idempotent, a changed
     /// byte is a new model, and there is no mutable "latest" pointer. The
     /// bytes live under the server's models dir at <see cref="StoragePath"/>;
@@ -354,7 +361,7 @@ namespace Server.Models
         /// before this model may be deployed on it; null = no minimum.</summary>
         public decimal? MinBalanceUsd { get; set; }
 
-        /// <summary>Comma-separated venue providers (ctrader, alpaca, mt4,
+        /// <summary>Comma-separated venue providers (ctrader, mt4,
         /// mt5) the model may run on; empty = every venue.</summary>
         [MaxLength(200)]
         public string Venues { get; set; } = "";
@@ -413,7 +420,7 @@ namespace Server.Models
         [MaxLength(300)]
         public string AccountKey { get; set; } = "";
 
-        /// <summary>Venue provider: ctrader, mt4, mt5, alpaca, …</summary>
+        /// <summary>Venue provider: ctrader, mt4, mt5, …</summary>
         [MaxLength(32)]
         public string Provider { get; set; } = "";
 
@@ -506,7 +513,7 @@ namespace Server.Models
         [Key]
         public Guid Id { get; set; }
 
-        /// <summary>Download source ("ctrader", "alpaca", "metatrader",
+        /// <summary>Download source ("ctrader", "metatrader",
         /// "databento").</summary>
         [MaxLength(40)]
         public string Source { get; set; } = "";
@@ -725,8 +732,8 @@ namespace Server.Models
     /// </summary>
     public class FleetTerminal
     {
-        /// <summary>Stable terminal_id (GUID hex); the EA presents the same id
-        /// when it dials the engine's TerminalService.</summary>
+        /// <summary>Stable terminal_id (GUID hex); the terminal bridge logs on
+        /// to the engine's FIX acceptor with this id as its SenderCompID.</summary>
         [MaxLength(64)]
         public string Id { get; set; } = "";
 

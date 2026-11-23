@@ -6,7 +6,8 @@
        - Strategist.Infrastructure.TimeSeries: the QuestDB historical
          market-data plane (ILP writes, /exec SQL reads, PGWire reads and
          the fault-tolerant chunked venue fetch jobs).
-       Messaging/push feeds ride gRPC (shared/Protos) - the MassTransit/
+       Messaging/push feeds ride the event feeds (the engine's FIX feed
+       plane, the backtest gRPC feed) - the MassTransit/
        RabbitMQ bus was retired with no consumers left on it. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

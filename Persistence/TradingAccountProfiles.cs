@@ -22,11 +22,10 @@ namespace Server.Data
 
         /// <summary>
         /// Account type implied by the venue itself, for providers that only
-        /// support one: Alpaca nets, MT4 always hedges. Null when it varies per account.
+        /// support one: MT4 always hedges. Null when it varies per account.
         /// </summary>
         public static string? ImpliedAccountType(string provider) => provider switch
         {
-            "alpaca" => Netting,
             "mt4" => Hedging,
             _ => null,
         };

@@ -7,15 +7,15 @@ namespace EventFeed;
 
 /// <summary>
 /// One serialized feed event: the subject it was published on, the payload
-/// JSON, and the server receive time (unix ms). Proto-agnostic — each gRPC
-/// feed service maps this onto its own wire message (the bot's
-/// serverevents.EngineStateUpdate, the backtest's
-/// backtestevents.BacktestEventUpdate).
+/// JSON, and the server receive time (unix ms). Wire-agnostic — each feed
+/// transport maps this onto its own message (the bot's U31 FeedEvent on the
+/// FIX feed plane, the backtest's backtestevents.BacktestEventUpdate over
+/// gRPC).
 /// </summary>
 public sealed record FeedEvent(string Subject, string Json, long ReceivedAtMs);
 
 /// <summary>
-/// The in-process hub behind the gRPC push feeds: producers publish
+/// The in-process hub behind the push feeds: producers publish
 /// subject-addressed payloads, subscribers get the latest state per matching
 /// subject replayed, then every live update.
 ///

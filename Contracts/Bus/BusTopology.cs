@@ -3,9 +3,9 @@ namespace Strategist.Contracts.Bus;
 /// <summary>
 /// The engine's state plane: latest-per-subject GUI state, carried as
 /// <see cref="V1.EngineStateChanged"/> frames (subject + JSON payload; a
-/// null/empty payload tombstones the subject) over gRPC — the engine's
-/// state stream up to the server, fanned out to desktop clients by the
-/// server's <c>EngineStateFeed</c> (shared/Protos/server_events.proto).
+/// null/empty payload tombstones the subject) over the engine's push feed
+/// (the FIX feed plane, shared/FleetBridge/spec/FIX44-FLEET.xml U30/U31), fanned out to
+/// desktop clients that subscribe with a subject prefix.
 /// Payload shapes live in <c>Strategist.Contracts.V1</c> and are frozen by
 /// the golden-payload characterization tests. (The former MassTransit/
 /// RabbitMQ transport was retired: these subjects are the surviving,

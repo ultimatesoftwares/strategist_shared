@@ -34,7 +34,9 @@ public readonly record struct Bar(
 /// <summary>Execution feedback from a broker, fed back into the engine.</summary>
 public readonly record struct ExecutionReport(
     ulong OrderId, uint SymbolId, OrderStatus Status, Side Side,
-    long FillPrice, ulong FillQty, ulong LeavesQty, ulong TsNanos);
+    long FillPrice, ulong FillQty, ulong LeavesQty, ulong TsNanos,
+    ulong BrokerOrderTicket = 0, ulong BrokerPositionTicket = 0,
+    string? BrokerOrderId = null, bool IsPositionClose = false);
 
 /// <summary>A command emitted by the engine for the broker to execute.</summary>
 public abstract record OrderCommand(ulong OrderId, uint SymbolId)

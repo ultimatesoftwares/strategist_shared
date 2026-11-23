@@ -38,7 +38,6 @@ usage is a complete census.
 | `instruments` | `strategist_bot` `Api/InstrumentsController.cs`, `Hosting/HistoricalDataService.cs` |
 | `instrument_catalog` | `strategist_bot` `Api/InstrumentsController.cs`, `Hosting/InstrumentCatalogSync.cs`, `Hosting/VenueDirectory.cs`, `Hosting/HistoricalDataService.cs` |
 | `ctrader_venues` | `strategist_bot` `Api/VenuesController.cs`, `Hosting/VenueDirectory.cs`, `Program.cs` |
-| `alpaca_venues` | `strategist_bot` `Api/VenuesController.cs`, `Hosting/VenueDirectory.cs` |
 | `projects` | `strategist_server` `Controllers/ProjectsController.cs` (moved from the bot 2026-11-16) |
 | `project_members` | `strategist_server` `Controllers/ProjectsController.cs` |
 | `project_strategy_links` | `strategist_server` `Controllers/ProjectsController.cs` |
@@ -76,7 +75,7 @@ Notes on the hooked tables (realism gaps / limitations):
   old bar-based quant-runtime columns (InstanceId/PackageId/BarTs/Step/
   InputJson/TargetsJson/Fired/LatencyUs) are gone; rows are now per
   order-emitting evaluation — account, venue, symbol, strategy descriptor
-  (e.g. `onnx:models/x.onnx`), forecast (null in warmup/degraded), status
+  (e.g. `ml:models/x.zip`), forecast (null in warmup/degraded), status
   (`warmup|active|degraded`), and a top-of-book + position `BookJson`
   snapshot. Deliberately NOT every evaluation (strategies evaluate per book
   update; that would be thousands of rows/sec). Forecast is the raw
@@ -145,8 +144,10 @@ Migrations already removed these; a live DB migrated to head does not have
 them, but a stale environment might: `trade_signals`
 (`20261111182842_DropTradeSignals`), `build_jobs` + `walkforward_runs`
 (`20261110205302`), `ibkr_venues` + `hyperliquid_venues` (`20261110073533`),
-and the pre-fleet `instrument_mappings` (`20261111234819
-RetireInstrumentMappings`). Verify stale environments with `\dt` before
+the pre-fleet `instrument_mappings` (`20261111234819
+RetireInstrumentMappings`), and `alpaca_venues`
+(`20261123120016_DropAlpacaVenues`, when the bot dropped the Alpaca broker
+adapter). Verify stale environments with `\dt` before
 assuming the migration history was applied.
 
 ## Cleanup recipe (done 2026-11-16 for the two dead clusters)

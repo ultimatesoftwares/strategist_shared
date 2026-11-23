@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading.Channels;
 
 using Trading.Core.Engine;
@@ -25,9 +26,11 @@ namespace Trading.Core;
 public sealed class EngineHost
 {
     private abstract record Event;
-    private sealed record MarketDataEvent(BookUpdate Update) : Event;
+    private sealed record MarketDataEvent(BookUpdate Update, long EnqueuedAt) : Event;
+    private sealed record QuoteEvent(QuoteTick Tick, long EnqueuedAt) : Event;
+    private sealed record QuoteWatchdogEvent : Event;
     private sealed record BarEvent(Bar Bar) : Event;
-    private sealed record ExecutionEvent(ExecutionReport Report) : Event;
+    private sealed record ExecutionEvent(ExecutionReport Report, long ReceivedAt) : Event;
     private sealed record ControlEvent(Action Action) : Event;
 
     /// <summary>Manual (operator/OMS) order ids live far above engine strategy ids.</summary>
@@ -40,6 +43,31 @@ public sealed class EngineHost
     private readonly string _name;
     private readonly bool _logFills;
     private readonly MarketDataRecorder? _recorder;
+    private readonly LatencyHistogram _marketQueueLatency = new();
+    private readonly LatencyHistogram _marketProcessingLatency = new();
+    private readonly LatencyHistogram _brokerSubmissionLatency = new();
+    private readonly LatencyHistogram _brokerResponseLatency = new();
+    private readonly LatencyHistogram _brokerFillLatency = new();
+    private readonly LatencyHistogram _quoteToSubmissionLatency = new();
+    private readonly LatencyHistogram _quoteToResponseLatency = new();
+    private readonly LatencyHistogram _quoteToFillLatency = new();
+    private const int MaxTimedOrders = 100_000;
+    private sealed class OrderTiming(long started, long? quoteOrigin, LinkedListNode<ulong> node)
+    {
+        public long Started { get; } = started;
+        public long? QuoteOrigin { get; } = quoteOrigin;
+        public LinkedListNode<ulong> Node { get; } = node;
+        public bool ResponseObserved;
+        public bool FillObserved;
+    }
+    private readonly Dictionary<ulong, OrderTiming> _orderTimings = [];
+    private readonly LinkedList<ulong> _timedOrderIds = [];
+    private long _orderTimingEvictions;
+    private long _expiredQuotes;
+    private static readonly TimeSpan QuoteDeadline = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan QuoteGap = TimeSpan.FromSeconds(1);
+    private readonly Dictionary<uint, long> _lastQuoteArrival = [];
+    private int _watchdogQueued;
 
     private readonly Channel<Event> _events = Channel.CreateUnbounded<Event>(
         new UnboundedChannelOptions { SingleReader = true });
@@ -47,6 +75,8 @@ public sealed class EngineHost
     // Written on the engine thread, safe to read from any thread.
     private readonly ConcurrentDictionary<uint, EngineSnapshot> _snapshots = new();
     private readonly ConcurrentDictionary<uint, BarDecisionSnapshot> _barDecisions = new();
+    private readonly ConcurrentDictionary<uint, TickDecisionSnapshot> _tickDecisions = new();
+    private readonly Dictionary<uint, long> _lastTickDecisionPublication = [];
     // Last gate-rejection reason per symbol (engine thread only), to log
     // persistent conditions (market closed, kill switch) once instead of per
     // order. Cleared when a placement passes the gate again.
@@ -56,9 +86,20 @@ public sealed class EngineHost
     public readonly record struct EngineSnapshot(TopOfBook TopOfBook, long Position);
     public sealed record BarDecisionSnapshot(
         Bar Bar, StrategyDecision Decision, DateTimeOffset ObservedUtc, string? OrderOutcome);
+    public sealed record TickDecisionSnapshot(
+        ulong QuoteTsNanos, StrategyDecision Decision, DateTimeOffset ObservedUtc);
 
     public BarDecisionSnapshot? GetBarDecision(uint symbolId) =>
         _barDecisions.GetValueOrDefault(symbolId);
+    public TickDecisionSnapshot? GetTickDecision(uint symbolId) =>
+        _tickDecisions.GetValueOrDefault(symbolId);
+
+    /// <summary>Process-lifetime timing diagnostics for this host.</summary>
+    public EngineLatencySnapshot GetLatencySnapshot() =>
+        new(_marketQueueLatency.Snapshot(), _marketProcessingLatency.Snapshot(), _brokerSubmissionLatency.Snapshot(),
+            Interlocked.Read(ref _expiredQuotes), _brokerResponseLatency.Snapshot(), _brokerFillLatency.Snapshot(),
+            Interlocked.Read(ref _orderTimingEvictions), _broker is ISyntheticExecutionSource,
+            _quoteToSubmissionLatency.Snapshot(), _quoteToResponseLatency.Snapshot(), _quoteToFillLatency.Snapshot());
 
     public long OrdersPlaced { get; private set; }
     public long OrdersCancelled { get; private set; }
@@ -125,27 +166,92 @@ public sealed class EngineHost
         _logFills = logFills;
         _recorder = recorder;
 
-        _broker.MarketData += u => _events.Writer.TryWrite(new MarketDataEvent(u));
-        if (broker is IBarSource barSource)
+        if (engine.RequiresAtomicQuotes)
+        {
+            if (broker is not IQuoteTickSource { SupportsQuoteTicks: true } ticks)
+                throw new InvalidOperationException("strategy requires an atomic quote feed from the broker");
+            ticks.QuoteTick += q => _events.Writer.TryWrite(new QuoteEvent(q, Stopwatch.GetTimestamp()));
+            if (_recorder is not null)
+                _broker.MarketData += u => _events.Writer.TryWrite(new MarketDataEvent(u, Stopwatch.GetTimestamp()));
+        }
+        else
+            _broker.MarketData += u => _events.Writer.TryWrite(new MarketDataEvent(u, Stopwatch.GetTimestamp()));
+        if (!engine.RequiresAtomicQuotes && broker is IBarSource barSource)
             barSource.Bars += b => _events.Writer.TryWrite(new BarEvent(b));
-        _broker.Execution += r => _events.Writer.TryWrite(new ExecutionEvent(r));
+        _broker.Execution += r => _events.Writer.TryWrite(new ExecutionEvent(r, Stopwatch.GetTimestamp()));
         _engine.OrderCommandReceived += c => _pendingCommands.Enqueue(c);
     }
 
     /// <summary>Process broker events until cancelled. Call from exactly one task.</summary>
     public async Task RunAsync(CancellationToken ct)
     {
+        using var watchdogStop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var watchdog = _engine.RequiresAtomicQuotes ? RunQuoteWatchdogAsync(watchdogStop.Token) : Task.CompletedTask;
         try
         {
             await foreach (var ev in _events.Reader.ReadAllAsync(ct))
             {
+                long? quoteOrigin = null;
+                uint quoteSymbol = 0;
                 switch (ev)
                 {
                     case MarketDataEvent md:
+                        var started = Stopwatch.GetTimestamp();
+                        _marketQueueLatency.Observe(started - md.EnqueuedAt);
                         _recorder?.Record(md.Update);
-                        _engine.PublishBookUpdate(md.Update);
-                        UpdateSnapshot(md.Update.SymbolId);
-                        NotifyDecision(md.Update.SymbolId, md.Update.TsNanos);
+                        if (!_engine.RequiresAtomicQuotes)
+                        {
+                            _engine.PublishBookUpdate(md.Update);
+                            UpdateSnapshot(md.Update.SymbolId);
+                            NotifyDecision(md.Update.SymbolId, md.Update.TsNanos);
+                        }
+                        _marketProcessingLatency.Observe(Stopwatch.GetTimestamp() - started);
+                        break;
+                    case QuoteEvent quote:
+                        var quoteStarted = Stopwatch.GetTimestamp();
+                        _marketQueueLatency.Observe(quoteStarted - quote.EnqueuedAt);
+                        if (_lastQuoteArrival.TryGetValue(quote.Tick.SymbolId, out var previousQuote)
+                            && Stopwatch.GetElapsedTime(previousQuote, quote.EnqueuedAt) > QuoteGap)
+                            _engine.PublishQuoteGap(quote.Tick.SymbolId);
+                        _lastQuoteArrival[quote.Tick.SymbolId] = quote.EnqueuedAt;
+                        if (Stopwatch.GetElapsedTime(quote.EnqueuedAt, quoteStarted) > QuoteDeadline)
+                        {
+                            Interlocked.Increment(ref _expiredQuotes);
+                            _engine.PublishQuoteGap(quote.Tick.SymbolId);
+                        }
+                        else
+                        {
+                            _engine.PublishTick(quote.Tick);
+                            if (Stopwatch.GetElapsedTime(quote.EnqueuedAt) > QuoteDeadline)
+                            {
+                                Interlocked.Increment(ref _expiredQuotes);
+                                _engine.PublishQuoteGap(quote.Tick.SymbolId);
+                                RejectExpiredCommands();
+                            }
+                            else
+                            {
+                                quoteOrigin = quote.EnqueuedAt;
+                                quoteSymbol = quote.Tick.SymbolId;
+                                UpdateSnapshot(quote.Tick.SymbolId);
+                                NotifyDecision(quote.Tick.SymbolId, quote.Tick.TsNanos);
+                            }
+                        }
+                        UpdateSnapshot(quote.Tick.SymbolId);
+                        PublishTickDecision(quote.Tick.SymbolId, quote.Tick.TsNanos);
+                        _marketProcessingLatency.Observe(Stopwatch.GetTimestamp() - quoteStarted);
+                        break;
+                    case QuoteWatchdogEvent:
+                        Interlocked.Exchange(ref _watchdogQueued, 0);
+                        var watchdogNow = Stopwatch.GetTimestamp();
+                        foreach (var symbol in _lastQuoteArrival
+                            .Where(p => Stopwatch.GetElapsedTime(p.Value, watchdogNow) > QuoteGap)
+                            .Select(p => p.Key).ToArray())
+                        {
+                            _lastQuoteArrival.Remove(symbol);
+                            _engine.PublishQuoteGap(symbol);
+                            UpdateSnapshot(symbol);
+                            PublishTickDecision(symbol, 0);
+                        }
                         break;
                     case BarEvent bar:
                         _engine.PublishBar(bar.Bar);
@@ -170,8 +276,11 @@ public sealed class EngineHost
                         }
                         break;
                     case ExecutionEvent ex:
+                        ObserveOrderTiming(ex.Report, ex.ReceivedAt);
                         _engine.PublishExecution(ex.Report);
                         UpdateSnapshot(ex.Report.SymbolId);
+                        if (_broker is IExecutionAppliedObserver observer)
+                            observer.OnExecutionApplied(ex.Report);
                         TrackExecution(ex.Report);
                         ExecutionProcessed?.Invoke(ex.Report);
                         break;
@@ -179,7 +288,7 @@ public sealed class EngineHost
                         ctl.Action();
                         break;
                 }
-                DrainCommands();
+                DrainCommands(quoteOrigin, quoteSymbol);
             }
         }
         catch (OperationCanceledException)
@@ -188,8 +297,23 @@ public sealed class EngineHost
         }
         finally
         {
+            watchdogStop.Cancel();
+            await watchdog;
             _recorder?.Flush();
         }
+    }
+
+    private async Task RunQuoteWatchdogAsync(CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+                if (Interlocked.CompareExchange(ref _watchdogQueued, 1, 0) == 0
+                    && !_events.Writer.TryWrite(new QuoteWatchdogEvent()))
+                    Interlocked.Exchange(ref _watchdogQueued, 0);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
     /// <summary>
@@ -223,24 +347,60 @@ public sealed class EngineHost
             snapshot.Position, tsNanos, placeIds));
     }
 
-    private void DrainCommands()
+    private void PublishTickDecision(uint symbolId, ulong tsNanos)
+    {
+        var now = Stopwatch.GetTimestamp();
+        if (_lastTickDecisionPublication.TryGetValue(symbolId, out var previous)
+            && Stopwatch.GetElapsedTime(previous, now) < TimeSpan.FromMilliseconds(250)
+            && _pendingCommands.Count == 0
+            && _engine.TryGetLastDecision(out var current)
+            && current.Status != DecisionStatus.Degraded)
+            return;
+        if (!_engine.TryGetLastDecision(out var decision))
+            return;
+        _lastTickDecisionPublication[symbolId] = now;
+        _tickDecisions[symbolId] = new TickDecisionSnapshot(tsNanos, decision, DateTimeOffset.UtcNow);
+    }
+
+    private void DrainCommands(long? quoteOrigin = null, uint quoteSymbol = 0)
     {
         while (_pendingCommands.TryDequeue(out var cmd))
         {
             switch (cmd)
             {
                 case OrderCommand.Place p:
+                    if (_engine.RequiresAtomicQuotes &&
+                        (quoteOrigin is null || p.SymbolId != quoteSymbol ||
+                         Stopwatch.GetElapsedTime(quoteOrigin.Value) > QuoteDeadline))
+                    {
+                        RejectStaleQuoteOrder(p, quoteOrigin, quoteSymbol);
+                        quoteOrigin = null;
+                        break;
+                    }
                     if (_orderGate?.Evaluate(p) is { Allowed: false, Reason: var reason })
                     {
                         RejectByGate(p, reason ?? "denied by risk gate");
                         break;
                     }
+
+                    if (_engine.RequiresAtomicQuotes && quoteOrigin is { } origin &&
+                        Stopwatch.GetElapsedTime(origin) > QuoteDeadline)
+                    {
+                        RejectStaleQuoteOrder(p, quoteOrigin, quoteSymbol);
+                        quoteOrigin = null;
+                        break;
+                    }
                     _lastGateReason.Remove(p.SymbolId);
                     OrdersPlaced++;
+                    var submissionStarted = Stopwatch.GetTimestamp();
+                    if (quoteOrigin is { } quoteStarted)
+                        _quoteToSubmissionLatency.Observe(Math.Max(0, submissionStarted - quoteStarted));
+                    StartOrderTiming(p.OrderId, submissionStarted, quoteOrigin);
                     if (_broker is IPositionAwareBroker positionAware)
                         positionAware.PlaceOrder(p, _engine.GetPosition(p.SymbolId));
                     else
                         _broker.PlaceOrder(p);
+                    _brokerSubmissionLatency.Observe(Stopwatch.GetTimestamp() - submissionStarted);
                     OrderRouted?.Invoke(p);
                     break;
                 case OrderCommand.Cancel c:
@@ -250,6 +410,76 @@ public sealed class EngineHost
                     OrderRouted?.Invoke(c);
                     break;
             }
+        }
+    }
+
+    private void RejectStaleQuoteOrder(OrderCommand.Place place, long? origin, uint symbol)
+    {
+        if (origin is { } started && Stopwatch.GetElapsedTime(started) > QuoteDeadline)
+        {
+            Interlocked.Increment(ref _expiredQuotes);
+            _engine.PublishQuoteGap(symbol);
+            UpdateSnapshot(symbol);
+            PublishTickDecision(symbol, 0);
+        }
+        RejectExpiredCommands(place);
+    }
+
+    private void RejectExpiredCommands(OrderCommand.Place? current = null)
+    {
+        var commands = _pendingCommands.ToArray();
+        _pendingCommands.Clear();
+        var unsent = commands.OfType<OrderCommand.Place>().Select(p => p.OrderId).ToHashSet();
+        if (current is not null)
+        {
+            unsent.Add(current.OrderId);
+            RejectByGate(current, "quote processing deadline exceeded or quote unavailable");
+        }
+        foreach (var command in commands)
+            if (command is OrderCommand.Place place)
+                RejectByGate(place, "quote processing deadline exceeded");
+            else if (!unsent.Contains(command.OrderId))
+                _pendingCommands.Enqueue(command);
+    }
+
+    private void StartOrderTiming(ulong orderId, long started, long? quoteOrigin)
+    {
+        if (_broker is ISyntheticExecutionSource)
+            return;
+        if (_orderTimings.Count == MaxTimedOrders)
+        {
+            var oldest = _timedOrderIds.First!;
+            _orderTimings.Remove(oldest.Value);
+            _timedOrderIds.RemoveFirst();
+            Interlocked.Increment(ref _orderTimingEvictions);
+        }
+        var node = _timedOrderIds.AddLast(orderId);
+        _orderTimings.Add(orderId, new OrderTiming(started, quoteOrigin, node));
+    }
+
+    private void ObserveOrderTiming(in ExecutionReport report, long receivedAt)
+    {
+        if (!_orderTimings.TryGetValue(report.OrderId, out var timing))
+            return;
+        if (!timing.ResponseObserved)
+        {
+            _brokerResponseLatency.Observe(Math.Max(0, receivedAt - timing.Started));
+            if (timing.QuoteOrigin is { } quoteOrigin)
+                _quoteToResponseLatency.Observe(Math.Max(0, receivedAt - quoteOrigin));
+            timing.ResponseObserved = true;
+        }
+        if (!timing.FillObserved && report.FillQty > 0
+            && report.Status is OrderStatus.PartiallyFilled or OrderStatus.Filled)
+        {
+            _brokerFillLatency.Observe(Math.Max(0, receivedAt - timing.Started));
+            if (timing.QuoteOrigin is { } quoteOrigin)
+                _quoteToFillLatency.Observe(Math.Max(0, receivedAt - quoteOrigin));
+            timing.FillObserved = true;
+        }
+        if (report.Status is OrderStatus.Filled or OrderStatus.Rejected or OrderStatus.Cancelled)
+        {
+            _orderTimings.Remove(report.OrderId);
+            _timedOrderIds.Remove(timing.Node);
         }
     }
 

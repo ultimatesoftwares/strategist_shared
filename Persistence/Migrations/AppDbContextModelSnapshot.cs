@@ -199,49 +199,6 @@ namespace Server.Migrations
                     b.ToTable("addresses", (string)null);
                 });
 
-            modelBuilder.Entity("Server.Models.AlpacaVenue", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AccountId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ApiKey")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("ApiSecret")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsLive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("alpaca_venues", (string)null);
-                });
-
             modelBuilder.Entity("Server.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -426,6 +383,35 @@ namespace Server.Migrations
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("FixCredentialsVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FixHost")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FixLogin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("FixPassword")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("FixPort")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FixSenderCompId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("FixSsl")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsLive")
                         .HasColumnType("boolean");
@@ -1336,7 +1322,7 @@ namespace Server.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Server.Models.AlpacaVenue", b =>
+            modelBuilder.Entity("Server.Models.CTraderVenue", b =>
                 {
                     b.HasOne("Server.Models.ApplicationUser", "User")
                         .WithMany()
@@ -1347,15 +1333,13 @@ namespace Server.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Server.Models.CTraderVenue", b =>
+            modelBuilder.Entity("Server.Models.InstrumentArtwork", b =>
                 {
-                    b.HasOne("Server.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                    b.HasOne("Server.Models.Instrument", null)
+                        .WithOne()
+                        .HasForeignKey("Server.Models.InstrumentArtwork", "InstrumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Server.Models.InstrumentArtwork", b =>

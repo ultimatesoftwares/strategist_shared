@@ -8,8 +8,8 @@ namespace EventFeed;
 /// The backtest API's gRPC surface of the <see cref="EventBroker"/>:
 /// implements <c>backtestevents.BacktestFeed</c>
 /// (shared/Protos/backtest/v1/backtest_events.proto). Same replay-then-live
-/// semantics as the bot's EngineStateFeed — a separate wire contract so the
-/// backtest feed can evolve independently of the bot's.
+/// semantics as the bot's FIX feed plane (U30/U31) — a separate wire
+/// contract so the backtest feed can evolve independently of the bot's.
 /// </summary>
 public sealed class BacktestFeedService : BacktestFeed.BacktestFeedBase
 {
