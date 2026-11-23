@@ -1,3 +1,4 @@
 [Bb]in/
 [Oo]bj/
 appsettings.Development.json
+FleetBridge/winecheck/*.exe

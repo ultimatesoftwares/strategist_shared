@@ -1,9 +1,9 @@
 # FleetBridge (C# / NativeAOT spike)
 
-C# port of the MT4/MT5 connector DLL the Fleet EAs load (`bridge/` in
-strategist_server is the proven C++ implementation this replaces). The EAs
-talk to this DLL through 34 undecorated `Fleet_*` exports (ABI v10); the DLL
-talks FIX 4.4 (`spec/FIX44-FLEET.xml`) to the engine.
+C# port of the MT4/MT5 connector DLL the Fleet EAs load (succeeds the
+retired C++ implementation — `bridge/` in strategist_server git history).
+The EAs talk to this DLL through 34 undecorated `Fleet_*` exports (ABI v10);
+the DLL talks FIX 4.4 (`spec/FIX44-FLEET.xml`) to the engine.
 
 ## Status: spike — two feasibility gates before the C++ bridge is dropped
 
@@ -21,10 +21,14 @@ building the C++ DLLs in the meantime — deliberate.
 ## Layout
 
 - `FleetBridge.csproj`, `Exports.cs`, `SharedState.cs`, `Consts.cs`, `Wstr.cs`
-  — the DLL. `Exports.cs` is the C# equivalent of `bridge/bridge.def` +
-  `bridge/src/exports.cpp`; `Consts.cs` mirrors `bridge/src/consts.h`
-  (ABI_VERSION=10 must keep matching `MTF_ABI_VERSION` in the EAs — any bump
-  requires recompiling the `.ex4`/`.ex5`).
+  — the DLL. `Exports.cs` is the C# equivalent of the C++ `bridge.def` +
+  `exports.cpp`; `Consts.cs` mirrors the C++ `consts.h` (ABI_VERSION=10 must
+  keep matching `MTF_ABI_VERSION` in the EAs — any bump requires recompiling
+  the `.ex4`/`.ex5`).
+- `ea/MQL4/Fleet.mq4`, `ea/MQL5/Fleet.mq5` — the Fleet EAs the terminals
+  run; they live next to the DLL because EA and ABI must version together.
+  The terminals Docker overlay compiles them with the base image's own
+  MetaEditors.
 - `spec/FIX44-FLEET.xml` — copy of the engine dialect (source of truth:
   strategist_bot `shared/Fix/FIX44-FLEET.xml`; never edit here).
 - `tools/AbiCheck/` — JIT console harness: loads a published DLL, asserts all
@@ -50,9 +54,10 @@ dotnet publish FleetBridge/FleetBridge.csproj -c Release -r win-x86
 
 ## After both gates pass (planned)
 
-1. Port the FIX session + state machine from `bridge/src/` into
-   `SharedState`/a `FixTransport`, reusing QuickFIXn.Core.
-2. Switch the terminals Dockerfile to pull `FleetBridge.dll` from CI instead
-   of compiling the C++ bridge (recommendation: publish to GHCR as an OCI
-   image or attach to Releases — raw workflow artifacts expire and need auth).
-3. Delete `bridge/` from strategist_server.
+1. Port the FIX session + state machine from the retired C++ bridge
+   (`fix_app.*`, `outbound.*`, `shared_state.*` in strategist_server git
+   history, pre-retirement) into `SharedState`/a `FixTransport`, reusing
+   QuickFIXn.Core.
+2. Done: the terminals Dockerfile pulls `FleetBridge.dll` from the GHCR
+   image this repo's CI publishes (`ghcr.io/ultimatesoftwares/fleetbridge`).
+3. Done: `bridge/` has been retired from strategist_server (EAs moved here).
