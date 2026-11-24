@@ -153,6 +153,15 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     /// <summary>Micro-bar length in milliseconds.</summary>
     public long BarMs { get; }
 
+    /// <summary>Minimum predicted edge to enter, in bps.</summary>
+    public double MinEdgeBps => _minEdgeBps;
+
+    /// <summary>Stop loss from the entry price, in bps.</summary>
+    public double StopBps => _stopBps;
+
+    /// <summary>Maximum holding time in closed micro-bars.</summary>
+    public long MaxHoldBars => _maxHoldBars;
+
     public bool RequiresAtomicQuotes => true;
 
     public StrategyDecision? LastDecision => _lastDecision;

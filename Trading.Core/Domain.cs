@@ -69,6 +69,11 @@ public enum StrategyKind : uint
     /// micro-bars driving an edge-model decision per closed micro-bar, with a
     /// tick-level stop loss (see Engine/TickEdgeStrategy.cs).</summary>
     TickEdge = 4,
+    /// <summary>Self-describing model package: the model.zip embeds a strategy.json
+    /// manifest declaring its decision policy, cadence and tuning (see
+    /// Engine/StrategyManifest.cs and Engine/ModelStrategies.cs). New strategies
+    /// ship as model files — no engine recompile.</summary>
+    Model = 5,
 }
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
@@ -81,8 +86,10 @@ public enum StrategyKind : uint
 /// the thresholds are the edge-mode parameters instead: the minimum predicted
 /// edge in bps (entry), the stop loss in bps (exit), the maximum hold in closed
 /// micro-bars, and <see cref="TickBarMs"/> as the micro-bar length in
-/// milliseconds (0 = 1000). <see cref="ModelPath"/> is required for Ml, TickMl
-/// and TickEdge — the only kinds that trade.
+/// milliseconds (0 = 1000). For <see cref="StrategyKind.Model"/> every
+/// parameter is an optional operator override: 0/null defers to the
+/// strategy.json manifest embedded in the model.zip. <see cref="ModelPath"/>
+/// is required for Ml, TickMl, TickEdge and Model — the only kinds that trade.
 /// </remarks>
 public readonly record struct StrategyConfig(
     StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
@@ -98,6 +105,7 @@ public readonly record struct StrategyConfig(
         StrategyKind.Ml => $"ml:{ModelPath}",
         StrategyKind.TickMl => $"tick_ml:{ModelPath}",
         StrategyKind.TickEdge => $"tick_edge:{ModelPath}",
+        StrategyKind.Model => $"model:{ModelPath}",
         StrategyKind.Null => "null",
         _ => "imbalance_quoter",
     };
