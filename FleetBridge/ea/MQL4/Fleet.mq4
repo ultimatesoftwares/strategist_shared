@@ -364,7 +364,7 @@ int OnInit()
    {
       Print("Fleet: bridge init failed (rc=",rc,"): ",BridgeLastError());
       Print("Fleet: verify MQL4\\Libraries contains the 32-bit FleetBridge.dll ",
-            "(cargo build --release -p fleet-bridge --target i686-pc-windows-gnu)");
+            "(prebuilt win-x86 by the strategist_shared FleetBridge workflow)");
       return INIT_FAILED;
    }
    SnapshotTickets(g_knownTickets,g_knownSL,g_knownTP); // baseline, no events for pre-existing trades

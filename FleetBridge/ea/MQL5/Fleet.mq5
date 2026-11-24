@@ -331,7 +331,7 @@ int OnInit()
    {
       Print("Fleet: bridge init failed (rc=",rc,"): ",BridgeLastError());
       Print("Fleet: verify MQL5\\Libraries contains the 64-bit FleetBridge.dll ",
-            "(cargo build --release -p fleet-bridge --target x86_64-pc-windows-gnu)");
+            "(prebuilt win-x64 by the strategist_shared FleetBridge workflow)");
       return INIT_FAILED;
    }
    SnapshotPendingBaseline(); // no ORDER_MODIFIED for pre-existing pendings

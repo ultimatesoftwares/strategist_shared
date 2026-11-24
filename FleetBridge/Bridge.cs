@@ -21,6 +21,13 @@ internal sealed class Bridge
     private readonly ManualResetEventSlim _stopSweep = new(false);
     private string _dictPath = "";
 
+    // Dictionary files are suffixed with a per-process sequence number:
+    // a second Fleet_Init (EA re-attach / chart takeover) restarts the
+    // bridge, and QuickFIX can still hold the previous bridge's file open
+    // (its DataDictionary stream is not disposed promptly), so recreating
+    // the same path fails with a sharing violation under Wine.
+    private static int _dictSeq;
+
     /// <summary>
     /// Throws on failure; the caller turns that into Fleet_LastError text.
     /// </summary>
@@ -28,7 +35,8 @@ internal sealed class Bridge
     {
         // The embedded dictionary must exist on disk for QuickFIX to load.
         _dictPath = Path.Combine(
-            Path.GetTempPath(), $"FIX44-FLEET-{Environment.ProcessId}.xml");
+            Path.GetTempPath(),
+            $"FIX44-FLEET-{Environment.ProcessId}-{Interlocked.Increment(ref _dictSeq)}.xml");
         using (Stream? src = Assembly.GetExecutingAssembly()
                    .GetManifestResourceStream("FIX44-FLEET.xml"))
         {
