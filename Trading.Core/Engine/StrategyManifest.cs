@@ -71,6 +71,10 @@ public sealed record StrategyManifest
     /// <summary>Order size in engine lots; 0 = engine default (1).</summary>
     public ulong OrderQty { get; init; }
 
+    /// <summary>Tuning for the <c>costScalper</c> policy; null = all defaults.
+    /// Ignored by other policies.</summary>
+    public CostScalperSettings? CostScalper { get; init; }
+
     /// <summary>True when the model wants tick micro-bars rather than venue bars.</summary>
     public bool IsTickCadence => string.Equals(Cadence, "ticks", StringComparison.OrdinalIgnoreCase);
 
@@ -155,5 +159,81 @@ public sealed record StrategyManifest
             throw new InvalidOperationException(
                 $"{modelPath}: {EntryName} entryZ/exitZ must be within 0..={MlStrategy.MaxZGate} "
                 + "(0 selects the engine default)");
+        CostScalper?.Validate(modelPath);
+    }
+}
+
+/// <summary>
+/// Tuning for the <c>costScalper</c> policy (see <c>CostScalperStrategy</c>).
+/// Every field follows the manifest convention: 0 (or an absent field)
+/// selects the engine default. All bps values are basis points of mid.
+/// </summary>
+public sealed record CostScalperSettings
+{
+    /// <summary>Required |predicted payoff| as a multiple of the live round-trip cost; 0 = 1.75.</summary>
+    public double CostMultiple { get; init; }
+
+    /// <summary>Commission estimate per order leg, in bps; venues do not report it. 0 = none.</summary>
+    public double CommissionBps { get; init; }
+
+    /// <summary>Efficiency-ratio boundary: below = fade regime, at/above = momentum regime; 0 = 0.35.</summary>
+    public double TrendEr { get; init; }
+
+    /// <summary>Max live spread as a multiple of its rolling median to enter; 0 = 1.5.</summary>
+    public double SpreadCapRatio { get; init; }
+
+    /// <summary>Minimum short-horizon volatility (sigma, bps) to enter; 0 = 0.5.</summary>
+    public double VolFloorBps { get; init; }
+
+    /// <summary>Maximum live sigma as a multiple of the slow typical-sigma EWMA to enter; 0 = 3.0.</summary>
+    public double VolCeilRatio { get; init; }
+
+    /// <summary>Take-profit target in entry sigmas (floored by cost × CostFloorMult); 0 = 2.0.</summary>
+    public double TpAtrMult { get; init; }
+
+    /// <summary>Take-profit floor as a multiple of round-trip cost (must stay &gt; 1); 0 = 1.5.</summary>
+    public double CostFloorMult { get; init; }
+
+    /// <summary>Stop distance in entry sigmas (clamped to cost floor and MaxStopBps); 0 = 3.0.</summary>
+    public double StopAtrMult { get; init; }
+
+    /// <summary>Fraction of peak floating net PnL surrendered before the profit lock closes; 0 = 0.4.</summary>
+    public double TrailGiveback { get; init; }
+
+    /// <summary>How much of the target decays away across the max hold (1 = all the way to the stale floor); 0 = 0.8.</summary>
+    public double DecayRate { get; init; }
+
+    /// <summary>Closed micro-bars after any exit before re-entry; 0 = 5.</summary>
+    public long CooldownBars { get; init; }
+
+    /// <summary>Closed micro-bars after a losing exit before re-entry; 0 = 15.</summary>
+    public long LossCooldownBars { get; init; }
+
+    /// <summary>Maximum entries per symbol per minute; 0 = 6.</summary>
+    public long MaxTradesPerMin { get; init; }
+
+    /// <summary>Consecutive losing trades per symbol before entries halt for the UTC day; 0 = 5.</summary>
+    public long MaxConsecutiveLosses { get; init; }
+
+    /// <summary>Realized loss per symbol per UTC day (bps, summed per trade) before entries halt; 0 = 500.</summary>
+    public double MaxDailyLossBps { get; init; }
+
+    internal void Validate(string modelPath)
+    {
+        static bool Bad(double v, double max) => !double.IsFinite(v) || v < 0 || v > max;
+        if (Bad(CostMultiple, 10) || Bad(CommissionBps, 50) || Bad(TrendEr, 1)
+            || Bad(SpreadCapRatio, 10) || Bad(VolFloorBps, 100) || Bad(VolCeilRatio, 20)
+            || Bad(TpAtrMult, 10) || Bad(StopAtrMult, 20) || Bad(TrailGiveback, 0.95)
+            || Bad(DecayRate, 1) || Bad(MaxDailyLossBps, 100_000))
+            throw new InvalidOperationException(
+                $"{modelPath}: {StrategyManifest.EntryName} costScalper tuning out of range "
+                + "(all values must be finite, >= 0 and within their documented bounds; 0 = default)");
+        if (CostFloorMult is not 0 && (!double.IsFinite(CostFloorMult) || CostFloorMult is <= 1 or > 5))
+            throw new InvalidOperationException(
+                $"{modelPath}: {StrategyManifest.EntryName} costScalper costFloorMult must be > 1 "
+                + "(the take profit must clear the round-trip cost) and <= 5, or 0 for the default");
+        if (CooldownBars < 0 || LossCooldownBars < 0 || MaxTradesPerMin < 0 || MaxConsecutiveLosses < 0)
+            throw new InvalidOperationException(
+                $"{modelPath}: {StrategyManifest.EntryName} costScalper bar/trade counts must be >= 0 (0 = default)");
     }
 }

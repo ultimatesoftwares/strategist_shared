@@ -27,6 +27,9 @@ public static class BarFeatures
     /// <summary>Index of <c>Z60</c> in <see cref="Names"/>.</summary>
     public const int Z60 = 1;
 
+    /// <summary>Index of <c>VolRatio</c> in <see cref="Names"/>.</summary>
+    public const int VolRatio = 7;
+
     /// <summary>Index of <paramref name="name"/> in <see cref="Names"/>, or -1.</summary>
     public static int IndexOf(string name)
     {
@@ -57,6 +60,9 @@ public sealed class BarFeatureWindow
 
     /// <summary>Closed bars folded in so far (warm at <see cref="WarmTarget"/>).</summary>
     public int Count => _count;
+
+    /// <summary>Open time (Unix ms) of the newest folded bar; MinValue = empty.</summary>
+    public long NewestBarOpenMs => _lastTimeMs;
 
     /// <summary>Bars needed before <see cref="IsWarm"/>: <see cref="BarFeatures.Warmup"/> + 1.</summary>
     public const int WarmTarget = Capacity;
@@ -105,6 +111,60 @@ public sealed class BarFeatureWindow
         var hour = time.Hour + time.Minute / 60.0;
         features[9] = Math.Sin(2 * Math.PI * hour / 24);
         features[10] = Math.Cos(2 * Math.PI * hour / 24);
+    }
+
+    /// <summary>
+    /// Standard deviation of the newest <paramref name="window"/> 1-bar log
+    /// returns, in bps — the short-horizon volatility behind cost-aware
+    /// targets and stops. NaN until <paramref name="window"/> + 1 bars exist.
+    /// </summary>
+    public double SigmaBps(int window)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(window, 2);
+        if (_count < window + 1)
+            return double.NaN;
+        var i = _count - 1;
+        Span<double> ret = stackalloc double[window];
+        for (var k = 0; k < window; k++)
+            ret[k] = _logClose[i - window + 1 + k] - _logClose[i - window + k];
+        return StdDev(ret, window - 1, window) * 1e4;
+    }
+
+    /// <summary>
+    /// Kaufman efficiency ratio over the newest <paramref name="window"/>
+    /// bars: |net log move| / sum of |1-bar log moves|, in [0, 1]. Near 0 =
+    /// choppy (mean-reverting) tape, near 1 = one-way trend. NaN until
+    /// <paramref name="window"/> + 1 bars exist; 0 when the tape is flat.
+    /// </summary>
+    public double EfficiencyRatio(int window)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(window, 2);
+        if (_count < window + 1)
+            return double.NaN;
+        var i = _count - 1;
+        double path = 0;
+        for (var k = i - window + 1; k <= i; k++)
+            path += Math.Abs(_logClose[k] - _logClose[k - 1]);
+        return path <= 0 ? 0 : Math.Abs(_logClose[i] - _logClose[i - window]) / path;
+    }
+
+    /// <summary>
+    /// Append every folded bar (oldest first) to <paramref name="into"/> for
+    /// checkpointing; bar open times are reconstructed backwards from the
+    /// newest bar at <paramref name="barIntervalMs"/> spacing (only the
+    /// newest open time is tracked exactly). Returns the number appended.
+    /// </summary>
+    public int ExportBars(long barIntervalMs, List<WarmupBarSnapshot> into)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(barIntervalMs, 0);
+        ArgumentNullException.ThrowIfNull(into);
+        for (var k = 0; k < _count; k++)
+        {
+            into.Add(new WarmupBarSnapshot(
+                _lastTimeMs - (long)(_count - 1 - k) * barIntervalMs,
+                Math.Exp(_logClose[k]), _volume[k]));
+        }
+        return _count;
     }
 
     private static double Mean(ReadOnlySpan<double> x, int i, int w)

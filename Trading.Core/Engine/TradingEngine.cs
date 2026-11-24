@@ -29,6 +29,14 @@ public sealed class TradingEngine : IDisposable
     private bool _disposed;
 
     public event Action<OrderCommand>? OrderCommandReceived;
+
+    /// <summary>
+    /// Fires synchronously when pre-trade risk vetoes a strategy intent
+    /// (same thread and re-entrancy rules as <see cref="OrderCommandReceived"/>).
+    /// Without a subscriber a veto is a silent drop — hosts should surface it.
+    /// </summary>
+    public event Action<OrderCommand, RiskVerdict>? OrderCommandRejected;
+
     public bool RequiresAtomicQuotes => _strategy.RequiresAtomicQuotes;
 
     /// <summary>The strategy's quote-silence tolerance (see <see cref="IStrategy.QuoteGapTolerance"/>).</summary>
@@ -69,6 +77,29 @@ public sealed class TradingEngine : IDisposable
 
     public string? SymbolName(uint symbolId) =>
         symbolId < _symbols.Count ? _symbols[(int)symbolId] : null;
+
+    /// <summary>Registered symbol count (ids are 0..Count-1).</summary>
+    public int SymbolCount => _symbols.Count;
+
+    /// <summary>Push a venue trade spec to the strategy (see <see cref="IStrategy.SetSymbolSpec"/>).</summary>
+    public void SetSymbolSpec(uint symbolId, in SymbolTradeSpec spec)
+    {
+        ThrowIfDisposed();
+        if (!_books.ContainsKey(symbolId))
+            throw new InvalidOperationException($"unknown symbol id {symbolId}");
+        _strategy.SetSymbolSpec(symbolId, in spec);
+    }
+
+    /// <summary>
+    /// Export the strategy's closed warm-up bars for one symbol (oldest
+    /// first) for checkpointing; 0 when the strategy keeps no exportable
+    /// warm state. Call on the engine thread.
+    /// </summary>
+    public int ExportWarmBars(uint symbolId, List<WarmupBarSnapshot> into)
+    {
+        ThrowIfDisposed();
+        return _strategy is IWarmStateSource source ? source.ExportWarmBars(symbolId, into) : 0;
+    }
 
     /// <summary>Feed a market data delta; commands fire synchronously via the event.</summary>
     public void PublishBookUpdate(in BookUpdate update)
@@ -283,8 +314,12 @@ public sealed class TradingEngine : IDisposable
             };
 
             var position = _positions.GetValueOrDefault(command.SymbolId);
-            if (_risk.Check(command, position, _openOrders) != RiskVerdict.Approved)
+            var verdict = _risk.Check(command, position, _openOrders);
+            if (verdict != RiskVerdict.Approved)
+            {
+                OrderCommandRejected?.Invoke(command, verdict);
                 continue;
+            }
 
             if (command is OrderCommand.Place approved)
             {

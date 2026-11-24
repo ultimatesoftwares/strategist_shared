@@ -83,6 +83,10 @@ public sealed class EngineHost
     // persistent conditions (market closed, kill switch) once instead of per
     // order. Cleared when a placement passes the gate again.
     private readonly Dictionary<uint, string> _lastGateReason = new();
+    // Last engine risk-veto reason per symbol. Written on the engine
+    // thread, read from API threads; logged once per distinct condition
+    // (like _lastGateReason) and cleared when an intent passes risk again.
+    private readonly ConcurrentDictionary<uint, string> _riskVetoes = new();
     private ulong _nextManualOrderId = ManualOrderIdBase;
 
     public readonly record struct EngineSnapshot(TopOfBook TopOfBook, long Position);
@@ -96,6 +100,11 @@ public sealed class EngineHost
     public TickDecisionSnapshot? GetTickDecision(uint symbolId) =>
         _tickDecisions.GetValueOrDefault(symbolId);
 
+    /// <summary>The symbol's most recent engine risk-veto reason, until an
+    /// intent passes risk again; null = none. Safe from any thread.</summary>
+    public string? GetRiskVeto(uint symbolId) =>
+        _riskVetoes.GetValueOrDefault(symbolId);
+
     /// <summary>Process-lifetime timing diagnostics for this host.</summary>
     public EngineLatencySnapshot GetLatencySnapshot() =>
         new(_marketQueueLatency.Snapshot(), _marketProcessingLatency.Snapshot(), _brokerSubmissionLatency.Snapshot(),
@@ -106,6 +115,8 @@ public sealed class EngineHost
     public long OrdersPlaced { get; private set; }
     public long OrdersCancelled { get; private set; }
     public long OrdersRejectedByGate { get; private set; }
+    /// <summary>Strategy intents vetoed by the engine's pre-trade risk checks.</summary>
+    public long OrdersRejectedByRisk { get; private set; }
     public long Fills { get; private set; }
     /// <summary>Realized cash flow in scaled price units * lots.</summary>
     public long RealizedCashFlow { get; private set; }
@@ -183,7 +194,22 @@ public sealed class EngineHost
         if (!engine.RequiresAtomicQuotes && broker is IBarSource barSource)
             barSource.Bars += b => _events.Writer.TryWrite(new BarEvent(b));
         _broker.Execution += r => _events.Writer.TryWrite(new ExecutionEvent(r, Stopwatch.GetTimestamp()));
-        _engine.OrderCommandReceived += c => _pendingCommands.Enqueue(c);
+        _engine.OrderCommandReceived += c =>
+        {
+            _riskVetoes.TryRemove(c.SymbolId, out _);
+            _pendingCommands.Enqueue(c);
+        };
+        _engine.OrderCommandRejected += (command, verdict) =>
+        {
+            OrdersRejectedByRisk++;
+            var reason = verdict.ToString();
+            if (_riskVetoes.TryGetValue(command.SymbolId, out var last) && last == reason)
+                return;
+            _riskVetoes[command.SymbolId] = reason;
+            Console.WriteLine(
+                $"[{_name}] ENGINE RISK VETO {command.GetType().Name} on "
+                + $"{_engine.SymbolName(command.SymbolId) ?? command.SymbolId.ToString()}: {reason} (repeats suppressed)");
+        };
     }
 
     /// <summary>Process broker events until cancelled. Call from exactly one task.</summary>
@@ -558,6 +584,25 @@ public sealed class EngineHost
             _broker.CancelOrder(cancel);
             OrderRouted?.Invoke(cancel);
             return true;
+        });
+
+    /// <summary>
+    /// Export the strategy's warm feature window per symbol (symbol name →
+    /// closed bars, oldest first) for checkpointing. Empty when the strategy
+    /// keeps no exportable warm state. Marshalled onto the engine loop.
+    /// </summary>
+    public Task<IReadOnlyDictionary<string, WarmupBarSnapshot[]>> ExportWarmStateAsync() =>
+        RunOnEngineLoopAsync<IReadOnlyDictionary<string, WarmupBarSnapshot[]>>(() =>
+        {
+            var result = new Dictionary<string, WarmupBarSnapshot[]>();
+            var buffer = new List<WarmupBarSnapshot>();
+            for (uint id = 0; id < _engine.SymbolCount; id++)
+            {
+                buffer.Clear();
+                if (_engine.ExportWarmBars(id, buffer) > 0 && _engine.SymbolName(id) is { } name)
+                    result[name] = [.. buffer];
+            }
+            return result;
         });
 
     /// <summary>Last known engine state for a symbol; readable from any thread.</summary>

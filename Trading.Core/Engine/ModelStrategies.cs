@@ -29,6 +29,15 @@ namespace Trading.Core.Engine;
 /// still be a named-feature edge regression — its score is published with
 /// every decision but never gates an entry. By construction this trades
 /// continuously and pays the spread each round trip.</item>
+/// <item><c>costScalper</c> — cost-aware scalping over micro-bars ("ticks"
+/// cadence only, named-feature edge regression required): enters only when
+/// the predicted payoff clears a multiple of the live measured round-trip
+/// cost and the regime gates pass; exits through a layered floating-PnL
+/// policy (cost-covering dynamic take profit, break-even ratchet, trailing
+/// profit lock, time-decayed target, ATR stop, edge-invalidation). Tuning
+/// lives in the manifest's <c>costScalper</c> section
+/// (<see cref="CostScalperSettings"/>); entryZ, orderQty, maxHoldBars and
+/// tickBarMs resolve as usual (override beats manifest beats default).</item>
 /// </list>
 ///
 /// <para>Operator overrides win: non-zero tuning in the
@@ -48,6 +57,7 @@ public static class ModelStrategies
             ["edge"] = BuildEdge,
             ["probability"] = BuildProbability,
             ["scalper"] = BuildScalper,
+            ["costScalper"] = BuildCostScalper,
         };
 
     private static readonly Lock Gate = new();
@@ -179,5 +189,22 @@ public static class ModelStrategies
             Resolve(overrides.TickBarMs, manifest.TickBarMs),
             takeProfitBps: manifest.TakeProfitBps,
             alwaysEnter: true);
+    }
+
+    private static IStrategy BuildCostScalper(
+        string modelPath, StrategyManifest manifest, StrategyConfig overrides)
+    {
+        if (!manifest.IsTickCadence)
+        {
+            throw new InvalidOperationException(
+                $"{modelPath}: policy 'costScalper' needs the \"ticks\" cadence (its cost and volatility estimates live on micro-bars)");
+        }
+        return CostScalperStrategy.FromFile(
+            modelPath,
+            Resolve(overrides.OrderQty, manifest.OrderQty),
+            Resolve(overrides.MaxHoldBars, manifest.MaxHoldBars),
+            Resolve(overrides.TickBarMs, manifest.TickBarMs),
+            Resolve(overrides.EntryZ, manifest.EntryZ),
+            manifest.CostScalper);
     }
 }

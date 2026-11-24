@@ -15,6 +15,34 @@ public abstract record Intent
 public readonly record struct OpenOrder(
     ulong OrderId, uint SymbolId, Side Side, long Price, ulong LeavesQty);
 
+/// <summary>
+/// Venue trading constraints for one symbol, in engine lots. 0 = unknown
+/// (the venue catalog was not enriched); strategies must treat unknown
+/// fields as unconstrained and learn from venue rejects instead.
+/// </summary>
+public readonly record struct SymbolTradeSpec(ulong MinQty, ulong QtyStep, ulong MaxQty);
+
+/// <summary>One closed bar of a strategy's warm feature window, exportable
+/// for checkpointing and restorable through <see cref="IStrategy.WarmBar"/>.</summary>
+public readonly record struct WarmupBarSnapshot(long OpenTimeMs, double Close, double Volume);
+
+/// <summary>
+/// A strategy whose per-symbol warm-up state (closed feature-window bars) can
+/// be exported, so hosts may checkpoint it and re-seed a successor instance
+/// through <see cref="IStrategy.WarmBar"/> instead of re-warming from live
+/// ticks. Call only on the engine thread.
+/// </summary>
+public interface IWarmStateSource
+{
+    /// <summary>
+    /// Append the symbol's closed warm-up bars (oldest first, at
+    /// <see cref="IStrategy.WarmupBarIntervalMs"/> spacing) to
+    /// <paramref name="into"/>; returns the number appended (0 = nothing to
+    /// checkpoint for this symbol).
+    /// </summary>
+    int ExportWarmBars(uint symbolId, List<WarmupBarSnapshot> into);
+}
+
 /// <summary>Context handed to the strategy on each event.</summary>
 public readonly struct StrategyContext(
     uint symbolId, OrderBook book, long position, IReadOnlyList<OpenOrder> openOrders)
@@ -91,6 +119,15 @@ public interface IStrategy
 
     /// <summary>Called after every execution report.</summary>
     void OnExecution(in ExecutionReport report, List<Intent> output)
+    {
+    }
+
+    /// <summary>
+    /// Hand the strategy a symbol's venue trading constraints (engine lots).
+    /// Hosts call this after symbol registration, before market data flows;
+    /// strategies that size orders should respect it. Default: ignored.
+    /// </summary>
+    void SetSymbolSpec(uint symbolId, in SymbolTradeSpec spec)
     {
     }
 
