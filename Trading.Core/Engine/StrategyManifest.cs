@@ -21,6 +21,7 @@ namespace Trading.Core.Engine;
 ///   "tickBarMs": 1000,       // micro-bar length; ticks cadence only
 ///   "entryBps": 10,          // policy entry tuning (0 = engine default)
 ///   "exitBps": 60,           // policy exit tuning (0 = engine default)
+///   "takeProfitBps": 3,      // tick policies: take-profit distance (0 = disabled)
 ///   "entryZ": 2.0,           // edge policy: |Z60| entry gate (0 = engine default)
 ///   "exitZ": 0.25,           // edge policy: Z60 reversion exit gate (0 = engine default)
 ///   "maxHoldBars": 30,       // maximum hold in closed (micro-)bars
@@ -53,6 +54,10 @@ public sealed record StrategyManifest
 
     /// <summary>Policy exit tuning in bps (e.g. stop loss, or P(up) exit threshold); 0 = engine default.</summary>
     public long ExitBps { get; init; }
+
+    /// <summary>Tick policies: take-profit distance from the entry price in
+    /// bps, checked per tick; 0 = disabled. The scalper policy requires it.</summary>
+    public long TakeProfitBps { get; init; }
 
     /// <summary>Edge policy: |Z60| needed to enter; 0 = engine default (2.0).</summary>
     public double EntryZ { get; init; }
@@ -142,7 +147,7 @@ public sealed record StrategyManifest
             throw new InvalidOperationException(
                 $"{modelPath}: {EntryName} tickBarMs must be within "
                 + $"{TickEdgeStrategy.MinBarMs}..={TickEdgeStrategy.MaxBarMs} ms (got {TickBarMs})");
-        if (EntryBps < 0 || ExitBps < 0 || MaxHoldBars < 0)
+        if (EntryBps < 0 || ExitBps < 0 || MaxHoldBars < 0 || TakeProfitBps < 0)
             throw new InvalidOperationException(
                 $"{modelPath}: {EntryName} tuning values must be >= 0 (0 selects the engine default)");
         if (!double.IsFinite(EntryZ) || EntryZ is < 0 or > MlStrategy.MaxZGate

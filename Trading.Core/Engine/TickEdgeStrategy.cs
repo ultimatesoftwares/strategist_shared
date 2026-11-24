@@ -40,7 +40,15 @@ namespace Trading.Core.Engine;
 /// current tick's touch.</item>
 /// <item><b>Every tick</b> while holding: flatten immediately when the mid
 /// moves the stop-loss distance against the entry price — the stop does not
-/// wait for the micro-bar to close.</item>
+/// wait for the micro-bar to close. A positive take profit flattens the same
+/// way once the mid moves that distance in the position's favour.</item>
+/// <item><b>Always-enter mode</b> (<see cref="AlwaysEnter"/>, the 'scalper'
+/// manifest policy): while the window is warm, every closed micro-bar with a
+/// flat book opens a position fading the Z60 stretch — no entry gates. The
+/// Z-reversion exit is disabled; the position leaves only at the take profit
+/// (required), the stop, or the maximum hold, and the next closed micro-bar
+/// re-enters. By construction this trades continuously and pays the spread
+/// every round trip; it is a flow scalper, not an edge harvester.</item>
 /// <item>An invalid quote or a processing gap resets the symbol's micro-bars
 /// (stop and max-hold exits keep working while the window re-warms); an
 /// inference failure poisons the strategy: cancel everything, never trade
@@ -94,6 +102,9 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     private readonly float[] _features;
     private readonly double[] _barFeatures = new double[BarFeatures.Names.Count];
 
+    private readonly double _takeProfitBps;
+    private readonly bool _alwaysEnter;
+
     /// <summary>Set on inference failure: cancel everything, never trade again.</summary>
     private bool _poisoned;
     private StrategyDecision? _lastDecision;
@@ -106,7 +117,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     public TickEdgeStrategy(
         IModelPredictor predictor, ulong orderQty, long minEdgeBps, long stopBps,
         long maxHoldBars, long barMs, double entryZ = MlStrategy.DefaultEdgeEntryZ,
-        double exitZ = MlStrategy.DefaultEdgeExitZ)
+        double exitZ = MlStrategy.DefaultEdgeExitZ, long takeProfitBps = 0,
+        bool alwaysEnter = false)
     {
         if (predictor.OutputKind != ModelOutputKind.Edge || predictor.FeatureIndexes is null)
             throw new InvalidOperationException(
@@ -121,6 +133,12 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
             || !double.IsFinite(exitZ) || exitZ is < 0 or > MlStrategy.MaxZGate)
             throw new InvalidOperationException(
                 $"tickEdge Z gates must be within 0..={MlStrategy.MaxZGate} (entryZ {entryZ}, exitZ {exitZ})");
+        if (takeProfitBps < 0)
+            throw new InvalidOperationException(
+                $"tickEdge take profit must be >= 0 bps (got {takeProfitBps}; 0 disables it)");
+        if (alwaysEnter && takeProfitBps == 0)
+            throw new InvalidOperationException(
+                "always-enter scalping requires a positive take profit (it is the only profit-taking exit)");
         _predictor = predictor;
         _orderQty = orderQty;
         _minEdgeBps = minEdgeBps;
@@ -128,6 +146,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         _maxHoldBars = maxHoldBars;
         _entryZ = entryZ;
         _exitZ = exitZ;
+        _takeProfitBps = takeProfitBps;
+        _alwaysEnter = alwaysEnter;
         BarMs = barMs;
         _featureIndexes = predictor.FeatureIndexes;
         _features = new float[predictor.FeatureCount];
@@ -143,7 +163,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     /// </summary>
     public static TickEdgeStrategy FromFile(
         string path, ulong orderQty, long minEdgeBps, long stopBps, long maxHoldBars,
-        long tickBarMs, double entryZ = 0, double exitZ = 0)
+        long tickBarMs, double entryZ = 0, double exitZ = 0, long takeProfitBps = 0,
+        bool alwaysEnter = false)
     {
         IModelPredictor predictor;
         try
@@ -165,7 +186,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
                 maxHoldBars > 0 ? maxHoldBars : MlStrategy.DefaultEdgeMaxHoldBars,
                 tickBarMs > 0 ? tickBarMs : DefaultBarMs,
                 entryZ > 0 ? entryZ : MlStrategy.DefaultEdgeEntryZ,
-                exitZ > 0 ? exitZ : MlStrategy.DefaultEdgeExitZ);
+                exitZ > 0 ? exitZ : MlStrategy.DefaultEdgeExitZ,
+                takeProfitBps, alwaysEnter);
         }
         catch
         {
@@ -191,6 +213,18 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
     /// <summary>Exit once Z60 has reverted to within this of the mean.</summary>
     public double ExitZ => _exitZ;
+
+    /// <summary>Take-profit distance from the entry price, in bps; 0 = disabled.</summary>
+    public double TakeProfitBps => _takeProfitBps;
+
+    /// <summary>True when every closed micro-bar enters while flat (no entry
+    /// gates) and only the take profit, stop or maximum hold exits.</summary>
+    public bool AlwaysEnter => _alwaysEnter;
+
+    /// <summary>Entry gates as shown in decisions: an always-enter scalper has none.</summary>
+    private double ShownEntryThreshold => _alwaysEnter ? 0 : _minEdgeBps;
+
+    private double ShownZThreshold => _alwaysEnter ? 0 : _entryZ;
 
     public bool RequiresAtomicQuotes => true;
 
@@ -311,18 +345,29 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         state.LastMid = mid;
         state.TickCount++;
 
-        // Tick-level stop loss: don't wait for the micro-bar to close. A
-        // working order (entry fill pending, or an exit already on its way)
-        // defers to the micro-bar-close cancel-then-decide cycle.
+        // Tick-level stop loss and take profit: don't wait for the micro-bar
+        // to close. A working order (entry fill pending, or an exit already on
+        // its way) defers to the micro-bar-close cancel-then-decide cycle.
         if (output.Count == 0 && ctx.Position != 0 && ctx.OpenOrders.Count == 0
-            && state.EntryPrice > 0 && mid > 0
-            && Math.Sign(ctx.Position) * Math.Log(mid / state.EntryPrice) <= -_stopBps / 1e4)
+            && state.EntryPrice > 0 && mid > 0)
         {
-            _lastDecision = new StrategyDecision(
-                _lastDecision?.Forecast ?? double.NaN, DecisionStatus.Active,
-                "Intrabar stop loss; flattening.", SignalKind: "edgeBps",
-                EntryThreshold: _minEdgeBps, ZThreshold: _entryZ);
-            PlaceTarget(ctx, tick, state, 0, output);
+            var move = Math.Sign(ctx.Position) * Math.Log(mid / state.EntryPrice);
+            if (move <= -_stopBps / 1e4)
+            {
+                _lastDecision = new StrategyDecision(
+                    _lastDecision?.Forecast ?? double.NaN, DecisionStatus.Active,
+                    "Intrabar stop loss; flattening.", SignalKind: "edgeBps",
+                    EntryThreshold: ShownEntryThreshold, ZThreshold: ShownZThreshold);
+                PlaceTarget(ctx, tick, state, 0, output);
+            }
+            else if (_takeProfitBps > 0 && move >= _takeProfitBps / 1e4)
+            {
+                _lastDecision = new StrategyDecision(
+                    _lastDecision?.Forecast ?? double.NaN, DecisionStatus.Active,
+                    "Intrabar take profit; flattening.", SignalKind: "edgeBps",
+                    EntryThreshold: ShownEntryThreshold, ZThreshold: ShownZThreshold);
+                PlaceTarget(ctx, tick, state, 0, output);
+            }
         }
     }
 
@@ -385,8 +430,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
         var z = _barFeatures[BarFeatures.Z60];
         _lastDecision = new StrategyDecision(prediction.Score, DecisionStatus.Active,
-            SignalKind: "edgeBps", Z60: z, EntryThreshold: _minEdgeBps,
-            ZThreshold: _entryZ);
+            SignalKind: "edgeBps", Z60: z, EntryThreshold: ShownEntryThreshold,
+            ZThreshold: ShownZThreshold);
 
         if (ctx.OpenOrders.Count > 0)
         {
@@ -402,12 +447,17 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         _lastDecision = _lastDecision.Value with
         {
             Reason = ctx.Position == 0
-                ? Math.Abs(z) < _entryZ && prediction.Score < _minEdgeBps
+                ? _alwaysEnter
+                    ? target > 0 ? "Always-in long entry (fading the Z60 stretch)."
+                    : "Always-in short entry (fading the Z60 stretch)."
+                : Math.Abs(z) < _entryZ && prediction.Score < _minEdgeBps
                     ? "Z60 and predicted edge are below entry thresholds."
                 : Math.Abs(z) < _entryZ ? "Z60 is below the entry threshold."
                 : prediction.Score < _minEdgeBps ? "Predicted edge is below the entry threshold."
                 : target > 0 ? "Long entry signal." : "Short entry signal."
-                : target == 0 ? "Exit signal: reversion, stop or maximum hold."
+                : target == 0
+                    ? _alwaysEnter ? "Exit signal: take profit, stop or maximum hold."
+                    : "Exit signal: reversion, stop or maximum hold."
                 : "Holding position; no exit condition met.",
         };
         PlaceTarget(ctx, tick, state, target, output);
@@ -419,17 +469,23 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         var z = _barFeatures[BarFeatures.Z60];
         if (ctx.Position == 0)
         {
-            if (Math.Abs(z) < _entryZ || score < _minEdgeBps)
+            if (!_alwaysEnter && (Math.Abs(z) < _entryZ || score < _minEdgeBps))
                 return 0;
             return z > 0 ? -(long)_orderQty : (long)_orderQty;
         }
 
         var direction = Math.Sign(ctx.Position);
-        var reverted = direction * z >= -_exitZ;
+        // Always-enter mode never exits on Z reversion: profits are taken at
+        // the take-profit distance, losses at the stop or the maximum hold.
+        var reverted = !_alwaysEnter && direction * z >= -_exitZ;
         var heldTooLong = state.BarsHeld >= _maxHoldBars;
-        var stopped = state.EntryPrice > 0 && state.LastMid > 0
-            && direction * Math.Log(state.LastMid / state.EntryPrice) <= -_stopBps / 1e4;
-        return reverted || heldTooLong || stopped ? 0 : ctx.Position;
+        var move = state.EntryPrice > 0 && state.LastMid > 0
+            ? direction * Math.Log(state.LastMid / state.EntryPrice)
+            : 0.0;
+        var stopped = state.EntryPrice > 0 && state.LastMid > 0 && move <= -_stopBps / 1e4;
+        var tookProfit = _takeProfitBps > 0 && state.EntryPrice > 0 && state.LastMid > 0
+            && move >= _takeProfitBps / 1e4;
+        return reverted || heldTooLong || stopped || tookProfit ? 0 : ctx.Position;
     }
 
     /// <summary>Fills <see cref="_features"/> from the warm window; false when any value is non-finite.</summary>

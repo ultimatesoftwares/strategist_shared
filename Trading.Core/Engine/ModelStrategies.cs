@@ -21,6 +21,14 @@ namespace Trading.Core.Engine;
 /// P(up) thresholds in bps of probability. The tick-cadence classifier is
 /// the experimental observe-only <see cref="TickMlStrategy"/> and must be
 /// configured explicitly as kind tickMl, never through a manifest.</item>
+/// <item><c>scalper</c> — always-in flow scalping over micro-bars ("ticks"
+/// cadence only): while flat, every closed micro-bar enters fading the Z60
+/// stretch with no entry gates; the position exits at the take-profit
+/// distance (takeProfitBps, checked per tick), the stop (exitBps) or the
+/// maximum hold, and the next closed micro-bar re-enters. The model must
+/// still be a named-feature edge regression — its score is published with
+/// every decision but never gates an entry. By construction this trades
+/// continuously and pays the spread each round trip.</item>
 /// </list>
 ///
 /// <para>Operator overrides win: non-zero tuning in the
@@ -39,6 +47,7 @@ public static class ModelStrategies
         {
             ["edge"] = BuildEdge,
             ["probability"] = BuildProbability,
+            ["scalper"] = BuildScalper,
         };
 
     private static readonly Lock Gate = new();
@@ -144,5 +153,31 @@ public static class ModelStrategies
                 $"{modelPath}: policy 'probability' needs a classifier, but this model is a named-feature regression (use policy 'edge')");
         }
         return strategy;
+    }
+
+    private static IStrategy BuildScalper(
+        string modelPath, StrategyManifest manifest, StrategyConfig overrides)
+    {
+        if (!manifest.IsTickCadence)
+        {
+            throw new InvalidOperationException(
+                $"{modelPath}: policy 'scalper' needs the \"ticks\" cadence (it re-enters on every closed micro-bar)");
+        }
+        if (manifest.TakeProfitBps <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{modelPath}: policy 'scalper' needs takeProfitBps > 0 (the take profit is its only profit-taking exit)");
+        }
+        // Entry gates (minimum edge, entryZ) and the reversion exit (exitZ)
+        // don't apply to an always-in scalper; exitBps is the stop loss.
+        return TickEdgeStrategy.FromFile(
+            modelPath,
+            Resolve(overrides.OrderQty, manifest.OrderQty),
+            minEdgeBps: 0,
+            Resolve(overrides.ExitThresholdBps, manifest.ExitBps),
+            Resolve(overrides.MaxHoldBars, manifest.MaxHoldBars),
+            Resolve(overrides.TickBarMs, manifest.TickBarMs),
+            takeProfitBps: manifest.TakeProfitBps,
+            alwaysEnter: true);
     }
 }
