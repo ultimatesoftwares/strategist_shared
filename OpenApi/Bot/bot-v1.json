@@ -1959,6 +1959,22 @@
             ],
             "format": "int64"
           },
+          "entryZ": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "exitZ": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
           "tickBarMs": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [

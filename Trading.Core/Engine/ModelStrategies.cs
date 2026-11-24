@@ -14,7 +14,8 @@ namespace Trading.Core.Engine;
 /// of fading the Z60 extreme. Cadence "bars" runs <see cref="MlStrategy"/>'s
 /// edge mode per venue bar; cadence "ticks" runs <see cref="TickEdgeStrategy"/>
 /// over micro-bars with the tick-level stop. entryBps = minimum edge,
-/// exitBps = stop loss, maxHoldBars = maximum hold.</item>
+/// exitBps = stop loss, entryZ/exitZ = Z60 entry/reversion gates,
+/// maxHoldBars = maximum hold.</item>
 /// <item><c>probability</c> — a binary classifier over P(up), bars cadence
 /// only (<see cref="MlStrategy"/>'s classifier rules). entryBps/exitBps are
 /// P(up) thresholds in bps of probability. The tick-cadence classifier is
@@ -94,6 +95,9 @@ public static class ModelStrategies
     private static ulong Resolve(ulong overrideValue, ulong manifestValue) =>
         overrideValue > 0 ? overrideValue : manifestValue;
 
+    private static double Resolve(double overrideValue, double manifestValue) =>
+        overrideValue > 0 ? overrideValue : manifestValue;
+
     private static IStrategy BuildEdge(
         string modelPath, StrategyManifest manifest, StrategyConfig overrides)
     {
@@ -101,13 +105,15 @@ public static class ModelStrategies
         var exit = Resolve(overrides.ExitThresholdBps, manifest.ExitBps);
         var hold = Resolve(overrides.MaxHoldBars, manifest.MaxHoldBars);
         var qty = Resolve(overrides.OrderQty, manifest.OrderQty);
+        var entryZ = Resolve(overrides.EntryZ, manifest.EntryZ);
+        var exitZ = Resolve(overrides.ExitZ, manifest.ExitZ);
         if (manifest.IsTickCadence)
         {
             return TickEdgeStrategy.FromFile(
                 modelPath, qty, entry, exit, hold,
-                Resolve(overrides.TickBarMs, manifest.TickBarMs));
+                Resolve(overrides.TickBarMs, manifest.TickBarMs), entryZ, exitZ);
         }
-        var strategy = MlStrategy.FromFile(modelPath, qty, entry, exit, hold);
+        var strategy = MlStrategy.FromFile(modelPath, qty, entry, exit, hold, entryZ, exitZ);
         if (!strategy.IsEdgeModel)
         {
             strategy.Dispose();

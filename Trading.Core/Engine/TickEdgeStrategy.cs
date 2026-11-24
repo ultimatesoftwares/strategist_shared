@@ -31,9 +31,11 @@ namespace Trading.Core.Engine;
 /// cross-venue price-level offsets and clock skew (seeded bars get synthetic
 /// times directly behind the first live bucket).</item>
 /// <item>Per closed micro-bar: cancel working orders and wait, otherwise
-/// enter against the stretch when flat (|Z60| ≥ <see cref="MlStrategy.EdgeEntryZ"/>
-/// and Score ≥ the minimum edge; short above the mean, long below) or
-/// flatten once Z60 reverts within <see cref="MlStrategy.EdgeExitZ"/>, after
+/// enter against the stretch when flat (|Z60| ≥ the entry Z, default
+/// <see cref="MlStrategy.DefaultEdgeEntryZ"/>, and Score ≥ the minimum edge;
+/// short above the mean, long below) or
+/// flatten once Z60 reverts within the exit Z (default
+/// <see cref="MlStrategy.DefaultEdgeExitZ"/>), after
 /// the maximum hold, or at the stop loss. Orders go marketable at the
 /// current tick's touch.</item>
 /// <item><b>Every tick</b> while holding: flatten immediately when the mid
@@ -81,6 +83,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     private readonly double _minEdgeBps;
     private readonly double _stopBps;
     private readonly long _maxHoldBars;
+    private readonly double _entryZ;
+    private readonly double _exitZ;
     private readonly IReadOnlyList<int> _featureIndexes;
     private readonly Dictionary<uint, SymbolState> _state = [];
     /// <summary>History closes queued by <see cref="WarmBar"/>, awaiting the
@@ -101,7 +105,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     /// </summary>
     public TickEdgeStrategy(
         IModelPredictor predictor, ulong orderQty, long minEdgeBps, long stopBps,
-        long maxHoldBars, long barMs)
+        long maxHoldBars, long barMs, double entryZ = MlStrategy.DefaultEdgeEntryZ,
+        double exitZ = MlStrategy.DefaultEdgeExitZ)
     {
         if (predictor.OutputKind != ModelOutputKind.Edge || predictor.FeatureIndexes is null)
             throw new InvalidOperationException(
@@ -112,11 +117,17 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         if (orderQty is 0 or > long.MaxValue || minEdgeBps <= 0 || stopBps <= 0 || maxHoldBars <= 0)
             throw new InvalidOperationException(
                 "tickEdge requires a positive order qty, minimum edge, stop loss and max hold");
+        if (!double.IsFinite(entryZ) || entryZ is <= 0 or > MlStrategy.MaxZGate
+            || !double.IsFinite(exitZ) || exitZ is < 0 or > MlStrategy.MaxZGate)
+            throw new InvalidOperationException(
+                $"tickEdge Z gates must be within 0..={MlStrategy.MaxZGate} (entryZ {entryZ}, exitZ {exitZ})");
         _predictor = predictor;
         _orderQty = orderQty;
         _minEdgeBps = minEdgeBps;
         _stopBps = stopBps;
         _maxHoldBars = maxHoldBars;
+        _entryZ = entryZ;
+        _exitZ = exitZ;
         BarMs = barMs;
         _featureIndexes = predictor.FeatureIndexes;
         _features = new float[predictor.FeatureCount];
@@ -127,11 +138,12 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     /// defaults: order qty 1, minimum edge <see cref="MlStrategy.DefaultMinEdgeBps"/>,
     /// stop <see cref="MlStrategy.DefaultStopBps"/>, max hold
     /// <see cref="MlStrategy.DefaultEdgeMaxHoldBars"/> micro-bars,
-    /// micro-bar length <see cref="DefaultBarMs"/> ms.
+    /// micro-bar length <see cref="DefaultBarMs"/> ms, entry/exit Z gates
+    /// <see cref="MlStrategy.DefaultEdgeEntryZ"/>/<see cref="MlStrategy.DefaultEdgeExitZ"/>.
     /// </summary>
     public static TickEdgeStrategy FromFile(
         string path, ulong orderQty, long minEdgeBps, long stopBps, long maxHoldBars,
-        long tickBarMs)
+        long tickBarMs, double entryZ = 0, double exitZ = 0)
     {
         IModelPredictor predictor;
         try
@@ -151,7 +163,9 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
                 minEdgeBps > 0 ? minEdgeBps : MlStrategy.DefaultMinEdgeBps,
                 stopBps > 0 ? stopBps : MlStrategy.DefaultStopBps,
                 maxHoldBars > 0 ? maxHoldBars : MlStrategy.DefaultEdgeMaxHoldBars,
-                tickBarMs > 0 ? tickBarMs : DefaultBarMs);
+                tickBarMs > 0 ? tickBarMs : DefaultBarMs,
+                entryZ > 0 ? entryZ : MlStrategy.DefaultEdgeEntryZ,
+                exitZ > 0 ? exitZ : MlStrategy.DefaultEdgeExitZ);
         }
         catch
         {
@@ -171,6 +185,12 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
     /// <summary>Maximum holding time in closed micro-bars.</summary>
     public long MaxHoldBars => _maxHoldBars;
+
+    /// <summary>|Z60| needed to enter.</summary>
+    public double EntryZ => _entryZ;
+
+    /// <summary>Exit once Z60 has reverted to within this of the mean.</summary>
+    public double ExitZ => _exitZ;
 
     public bool RequiresAtomicQuotes => true;
 
@@ -301,7 +321,7 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
             _lastDecision = new StrategyDecision(
                 _lastDecision?.Forecast ?? double.NaN, DecisionStatus.Active,
                 "Intrabar stop loss; flattening.", SignalKind: "edgeBps",
-                EntryThreshold: _minEdgeBps, ZThreshold: MlStrategy.EdgeEntryZ);
+                EntryThreshold: _minEdgeBps, ZThreshold: _entryZ);
             PlaceTarget(ctx, tick, state, 0, output);
         }
     }
@@ -366,7 +386,7 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         var z = _barFeatures[BarFeatures.Z60];
         _lastDecision = new StrategyDecision(prediction.Score, DecisionStatus.Active,
             SignalKind: "edgeBps", Z60: z, EntryThreshold: _minEdgeBps,
-            ZThreshold: MlStrategy.EdgeEntryZ);
+            ZThreshold: _entryZ);
 
         if (ctx.OpenOrders.Count > 0)
         {
@@ -382,9 +402,9 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         _lastDecision = _lastDecision.Value with
         {
             Reason = ctx.Position == 0
-                ? Math.Abs(z) < MlStrategy.EdgeEntryZ && prediction.Score < _minEdgeBps
+                ? Math.Abs(z) < _entryZ && prediction.Score < _minEdgeBps
                     ? "Z60 and predicted edge are below entry thresholds."
-                : Math.Abs(z) < MlStrategy.EdgeEntryZ ? "Z60 is below the entry threshold."
+                : Math.Abs(z) < _entryZ ? "Z60 is below the entry threshold."
                 : prediction.Score < _minEdgeBps ? "Predicted edge is below the entry threshold."
                 : target > 0 ? "Long entry signal." : "Short entry signal."
                 : target == 0 ? "Exit signal: reversion, stop or maximum hold."
@@ -399,13 +419,13 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         var z = _barFeatures[BarFeatures.Z60];
         if (ctx.Position == 0)
         {
-            if (Math.Abs(z) < MlStrategy.EdgeEntryZ || score < _minEdgeBps)
+            if (Math.Abs(z) < _entryZ || score < _minEdgeBps)
                 return 0;
             return z > 0 ? -(long)_orderQty : (long)_orderQty;
         }
 
         var direction = Math.Sign(ctx.Position);
-        var reverted = direction * z >= -MlStrategy.EdgeExitZ;
+        var reverted = direction * z >= -_exitZ;
         var heldTooLong = state.BarsHeld >= _maxHoldBars;
         var stopped = state.EntryPrice > 0 && state.LastMid > 0
             && direction * Math.Log(state.LastMid / state.EntryPrice) <= -_stopBps / 1e4;

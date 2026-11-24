@@ -212,7 +212,7 @@ public static class StrategyFactory
             ? throw new InvalidOperationException("ml strategy requires a model path")
             : MlStrategy.FromFile(
                 config.ModelPath, config.OrderQty, config.EntryThresholdBps,
-                config.ExitThresholdBps, config.MaxHoldBars),
+                config.ExitThresholdBps, config.MaxHoldBars, config.EntryZ, config.ExitZ),
         StrategyKind.TickMl => string.IsNullOrEmpty(config.ModelPath)
             ? throw new InvalidOperationException("tickMl strategy requires a model path")
             : TickMlStrategy.FromFile(config.ModelPath, config.OrderQty,
@@ -221,7 +221,7 @@ public static class StrategyFactory
             ? throw new InvalidOperationException("tickEdge strategy requires a model path")
             : TickEdgeStrategy.FromFile(config.ModelPath, config.OrderQty,
                 config.EntryThresholdBps, config.ExitThresholdBps, config.MaxHoldBars,
-                config.TickBarMs),
+                config.TickBarMs, config.EntryZ, config.ExitZ),
         StrategyKind.Model => string.IsNullOrEmpty(config.ModelPath)
             ? throw new InvalidOperationException("model strategy requires a model path")
             : ModelStrategies.Create(config),

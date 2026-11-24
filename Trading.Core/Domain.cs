@@ -93,7 +93,8 @@ public enum StrategyKind : uint
 /// </remarks>
 public readonly record struct StrategyConfig(
     StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
-    long ExitThresholdBps = 0, long MaxHoldBars = 0, long TickBarMs = 0)
+    long ExitThresholdBps = 0, long MaxHoldBars = 0, long TickBarMs = 0,
+    double EntryZ = 0, double ExitZ = 0)
 {
     /// <summary>No model, no trading: the default is the non-trading Null
     /// strategy. Trading requires an explicit ML config (Ml/TickMl/TickEdge + model).</summary>

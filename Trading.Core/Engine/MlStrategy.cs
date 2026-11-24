@@ -33,9 +33,10 @@ namespace Trading.Core.Engine;
 /// <see cref="BarFeatures.Warmup"/> + 1 bars are seen. A classifier keeps the
 /// P(up) rules above. A regression <c>Score</c> is the predicted payoff in
 /// bps of fading the <c>Z60</c> extreme (<see cref="ModelOutputKind.Edge"/>):
-/// enter when flat, |Z60| ≥ <see cref="EdgeEntryZ"/> and Score ≥ the minimum
-/// edge, short above the mean and long below; flatten once Z60 reverts
-/// within <see cref="EdgeExitZ"/>, after the max hold bars, or at the stop
+/// enter when flat, |Z60| ≥ the entry Z (default <see cref="DefaultEdgeEntryZ"/>)
+/// and Score ≥ the minimum edge, short above the mean and long below; flatten
+/// once Z60 reverts within the exit Z (default <see cref="DefaultEdgeExitZ"/>),
+/// after the max hold bars, or at the stop
 /// loss. In this mode the entry threshold is the minimum edge in bps, the
 /// exit threshold is the stop loss in bps from the entry price.</para>
 /// </summary>
@@ -59,11 +60,14 @@ public sealed class MlStrategy : IStrategy, IDisposable
     /// <summary>Edge mode: default maximum holding time in closed bars.</summary>
     public const long DefaultEdgeMaxHoldBars = 30;
 
-    /// <summary>Edge mode: |Z60| needed to enter.</summary>
-    public const double EdgeEntryZ = 2.0;
+    /// <summary>Edge mode: default |Z60| needed to enter.</summary>
+    public const double DefaultEdgeEntryZ = 2.0;
 
-    /// <summary>Edge mode: exit once Z60 has reverted to within this of the mean.</summary>
-    public const double EdgeExitZ = 0.25;
+    /// <summary>Edge mode: default exit once Z60 has reverted to within this of the mean.</summary>
+    public const double DefaultEdgeExitZ = 0.25;
+
+    /// <summary>Largest configurable entry/exit Z-gate (sanity bound).</summary>
+    public const double MaxZGate = 10.0;
 
     private sealed class SymbolState
     {
@@ -92,6 +96,8 @@ public sealed class MlStrategy : IStrategy, IDisposable
     private readonly bool _edge;
     private readonly double _minEdgeBps;
     private readonly double _stopBps;
+    private readonly double _entryZ;
+    private readonly double _exitZ;
     private readonly Dictionary<uint, SymbolState> _state = [];
     // Reused per bar: the engine is single-threaded by contract.
     private readonly float[] _features;
@@ -104,7 +110,8 @@ public sealed class MlStrategy : IStrategy, IDisposable
 
     private MlStrategy(
         IModelPredictor predictor, ulong orderQty, float entryThreshold, float exitThreshold,
-        long maxHoldBars, double minEdgeBps = 0, double stopBps = 0)
+        long maxHoldBars, double minEdgeBps = 0, double stopBps = 0,
+        double entryZ = DefaultEdgeEntryZ, double exitZ = DefaultEdgeExitZ)
     {
         _predictor = predictor;
         _orderQty = orderQty;
@@ -115,6 +122,8 @@ public sealed class MlStrategy : IStrategy, IDisposable
         _edge = predictor.OutputKind == ModelOutputKind.Edge;
         _minEdgeBps = minEdgeBps;
         _stopBps = stopBps;
+        _entryZ = entryZ;
+        _exitZ = exitZ;
         _features = new float[predictor.FeatureCount];
     }
 
@@ -124,14 +133,27 @@ public sealed class MlStrategy : IStrategy, IDisposable
     /// <summary>Closed bars needed before the first prediction.</summary>
     public int WarmupBars => _featureIndexes is null ? ModelPredictor.ReturnCount + 1 : BarFeatures.Warmup + 1;
 
+    /// <summary>Edge mode: |Z60| needed to enter.</summary>
+    public double EntryZ => _entryZ;
+
+    /// <summary>Edge mode: exit once Z60 has reverted to within this of the mean.</summary>
+    public double ExitZ => _exitZ;
+
     /// <summary>
     /// Load the model and build the strategy. 0 (or negative) parameters
     /// select the defaults; thresholds are bps of probability (6000 = 0.60).
+    /// Edge mode only: <paramref name="entryZ"/>/<paramref name="exitZ"/>
+    /// override the Z60 entry/exit gates (0 = defaults
+    /// <see cref="DefaultEdgeEntryZ"/>/<see cref="DefaultEdgeExitZ"/>).
     /// </summary>
     public static MlStrategy FromFile(
         string path, ulong orderQty, long entryThresholdBps, long exitThresholdBps,
-        long maxHoldBars)
+        long maxHoldBars, double entryZ = 0, double exitZ = 0)
     {
+        if (!double.IsFinite(entryZ) || entryZ is < 0 or > MaxZGate
+            || !double.IsFinite(exitZ) || exitZ is < 0 or > MaxZGate)
+            throw new InvalidOperationException(
+                $"edge Z gates must be within 0..={MaxZGate} (entryZ {entryZ}, exitZ {exitZ}; 0 selects the default)");
         IModelPredictor predictor;
         try
         {
@@ -151,7 +173,9 @@ public sealed class MlStrategy : IStrategy, IDisposable
                 0, 0,
                 maxHoldBars > 0 ? maxHoldBars : DefaultEdgeMaxHoldBars,
                 entryThresholdBps > 0 ? entryThresholdBps : DefaultMinEdgeBps,
-                exitThresholdBps > 0 ? exitThresholdBps : DefaultStopBps);
+                exitThresholdBps > 0 ? exitThresholdBps : DefaultStopBps,
+                entryZ > 0 ? entryZ : DefaultEdgeEntryZ,
+                exitZ > 0 ? exitZ : DefaultEdgeExitZ);
         }
 
         var entry = entryThresholdBps > 0 ? entryThresholdBps : DefaultEntryThresholdBps;
@@ -235,7 +259,7 @@ public sealed class MlStrategy : IStrategy, IDisposable
         var up = prediction.ProbabilityUp;
         _lastDecision = _edge
             ? new StrategyDecision(prediction.Score, DecisionStatus.Active, SignalKind: "edgeBps",
-                Z60: _barFeatures[BarFeatures.Z60], EntryThreshold: _minEdgeBps, ZThreshold: EdgeEntryZ)
+                Z60: _barFeatures[BarFeatures.Z60], EntryThreshold: _minEdgeBps, ZThreshold: _entryZ)
             : new StrategyDecision(up, DecisionStatus.Active, SignalKind: "probabilityUp", EntryThreshold: _entryThreshold);
 
         if (ctx.Position == 0)
@@ -257,8 +281,8 @@ public sealed class MlStrategy : IStrategy, IDisposable
             var edgeTarget = EdgeTarget(ctx, bar, state, prediction.Score);
             var z = _barFeatures[BarFeatures.Z60];
             var reason = ctx.Position == 0
-                ? Math.Abs(z) < EdgeEntryZ && prediction.Score < _minEdgeBps ? "Z60 and predicted edge are below entry thresholds."
-                : Math.Abs(z) < EdgeEntryZ ? "Z60 is below the entry threshold."
+                ? Math.Abs(z) < _entryZ && prediction.Score < _minEdgeBps ? "Z60 and predicted edge are below entry thresholds."
+                : Math.Abs(z) < _entryZ ? "Z60 is below the entry threshold."
                 : prediction.Score < _minEdgeBps ? "Predicted edge is below the entry threshold."
                 : edgeTarget > 0 ? "Long entry signal." : "Short entry signal."
                 : edgeTarget == 0 ? "Exit signal: reversion, stop or maximum hold." : "Holding position; no exit condition met.";
@@ -305,13 +329,13 @@ public sealed class MlStrategy : IStrategy, IDisposable
         var z = _barFeatures[BarFeatures.Z60];
         if (ctx.Position == 0)
         {
-            if (Math.Abs(z) < EdgeEntryZ || score < _minEdgeBps)
+            if (Math.Abs(z) < _entryZ || score < _minEdgeBps)
                 return 0;
             return z > 0 ? -(long)_orderQty : (long)_orderQty;
         }
 
         var direction = Math.Sign(ctx.Position);
-        var reverted = direction * z >= -EdgeExitZ;
+        var reverted = direction * z >= -_exitZ;
         var heldTooLong = state.BarsHeld >= _maxHoldBars;
         var stopped = state.EntryPrice > 0 && bar.Close > 0
             && direction * Math.Log((double)bar.Close / state.EntryPrice) <= -_stopBps / 1e4;
