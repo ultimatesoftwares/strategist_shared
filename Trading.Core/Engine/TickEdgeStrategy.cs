@@ -195,7 +195,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         if (!_poisoned)
         {
             _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Degraded,
-                "Quote stream interrupted or invalid; micro-bars must warm up again.");
+                "Quote stream interrupted or invalid; micro-bars must warm up again.",
+                WarmupCount: 0, WarmupTarget: BarFeatureWindow.WarmTarget);
         }
         CancelAll(ctx, output);
     }
@@ -272,7 +273,8 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         if (!warm || !ComputeFeatures(state))
         {
             _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Warmup,
-                "Waiting for sufficient micro-bars, or ignoring a stale bucket.");
+                "Waiting for sufficient micro-bars, or ignoring a stale bucket.",
+                WarmupCount: state.Window.Count, WarmupTarget: BarFeatureWindow.WarmTarget);
             // Model-free exits keep working while the window (re)warms.
             if (ctx.Position != 0 && state.BarsHeld >= _maxHoldBars)
             {

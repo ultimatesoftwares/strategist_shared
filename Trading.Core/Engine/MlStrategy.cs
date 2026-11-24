@@ -206,8 +206,10 @@ public sealed class MlStrategy : IStrategy, IDisposable
         }
         if (!UpdateWindow(state, bar, _features))
         {
+            var (warmCount, warmTarget) = WarmupProgress(state);
             _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Warmup,
-                "Waiting for sufficient valid bars, or ignoring a stale bar.");
+                "Waiting for sufficient valid bars, or ignoring a stale bar.",
+                WarmupCount: warmCount, WarmupTarget: warmTarget);
             return;
         }
 
@@ -340,6 +342,13 @@ public sealed class MlStrategy : IStrategy, IDisposable
         foreach (var order in ctx.OpenOrders)
             output.Add(new Intent.Cancel(order.OrderId, ctx.SymbolId));
     }
+
+    /// <summary>Bars accumulated towards the first decision, and the bars
+    /// needed, for whichever window flavour this model uses.</summary>
+    private (int Count, int Target) WarmupProgress(SymbolState state) =>
+        _featureIndexes is not null
+            ? (state.Window?.Count ?? 0, BarFeatureWindow.WarmTarget)
+            : (state.Closes.Count, ModelPredictor.ReturnCount + 1);
 
     /// <summary>
     /// Fold a closed bar into the symbol's return window. Fills

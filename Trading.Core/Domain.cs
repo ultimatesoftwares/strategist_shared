@@ -127,12 +127,13 @@ public enum DecisionStatus : uint
 /// <summary>
 /// The strategy's signal snapshot behind its most recent book evaluation.
 /// Forecast is a dimensionless signal (NaN when none was computed, e.g.
-/// during warm-up or degradation).
+/// during warm-up or degradation). During warm-up, WarmupCount/WarmupTarget
+/// report how much history has accumulated towards the first decision.
 /// </summary>
 public readonly record struct StrategyDecision(
     double Forecast, DecisionStatus Status, string? Reason = null,
     string? SignalKind = null, double? Z60 = null, double? EntryThreshold = null,
-    double? ZThreshold = null)
+    double? ZThreshold = null, int? WarmupCount = null, int? WarmupTarget = null)
 {
     /// <summary>Journal string for <see cref="Status"/>: "warmup" | "active" | "degraded".</summary>
     public string StatusString => Status switch

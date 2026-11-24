@@ -55,6 +55,12 @@ public sealed class BarFeatureWindow
 
     public bool IsWarm => _count == Capacity;
 
+    /// <summary>Closed bars folded in so far (warm at <see cref="WarmTarget"/>).</summary>
+    public int Count => _count;
+
+    /// <summary>Bars needed before <see cref="IsWarm"/>: <see cref="BarFeatures.Warmup"/> + 1.</summary>
+    public const int WarmTarget = Capacity;
+
     /// <summary>Folds in a closed bar; false when it was ignored.</summary>
     public bool Add(long openTimeMs, double close, double volume)
     {
