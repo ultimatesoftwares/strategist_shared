@@ -74,7 +74,12 @@ internal sealed class Bridge
             _app,
             new MemoryStoreFactory(), // stateless: ResetOnLogon, no persistence
             new SessionSettings(new StringReader(settings)),
-            new NullLogFactory());
+            new NullLogFactory(),
+            // Without this, QuickFIX/n falls back to DefaultMessageFactory,
+            // whose group overload throws when no generated FIX.4.4 assembly
+            // is loaded: logon succeeds but the first grouped command (U7
+            // SubscribeSymbols) kills the session. See FleetMessageFactory.
+            new FleetMessageFactory());
 
         Shared.SetState(Consts.StateConnecting);
         _initiator.Start(); // spawns the QuickFIX network thread

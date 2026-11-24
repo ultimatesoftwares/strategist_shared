@@ -34,6 +34,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The one factory definition the bridge DLL itself uses: the gate must
+         exercise the exact group-parsing path production runs. -->
+    <Compile Include="..\..\MessageFactory.cs" Link="MessageFactory.cs" />
     <Content Include="..\..\spec\FIX44-FLEET.xml" Link="spec\FIX44-FLEET.xml"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
