@@ -228,10 +228,15 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
     public bool RequiresAtomicQuotes => true;
 
-    /// <summary>Quotes may legitimately pause for a good part of a micro-bar:
-    /// only a silence longer than one full bar invalidates the window (a
-    /// sparse bucket still closes correctly on the next tick).</summary>
-    public TimeSpan QuoteGapTolerance => TimeSpan.FromMilliseconds(BarMs);
+    /// <summary>Quotes pause legitimately on sparse feeds — venues publish
+    /// only on change, so multi-second silences are routine on quiet symbols
+    /// and an empty bucket is not a broken feed (the window bridges it: the
+    /// next tick closes the old bucket and resumes). Rebuilding the window
+    /// costs <see cref="BarFeatureWindow.WarmTarget"/> bars of dead time, so
+    /// only a silence long enough to suggest a dead-but-undetected feed (30
+    /// bars, floored at one minute) invalidates it; hard disconnects already
+    /// tear the whole account down regardless.</summary>
+    public TimeSpan QuoteGapTolerance => TimeSpan.FromMilliseconds(Math.Max(30 * BarMs, 60_000));
 
     public StrategyDecision? LastDecision => _lastDecision;
 
