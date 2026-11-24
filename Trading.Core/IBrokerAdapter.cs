@@ -66,6 +66,10 @@ public interface IBarSource
 /// </summary>
 public interface IBarHistorySource
 {
+    /// <summary>Interval (in ms) of the bars <see cref="RecentBarsAsync"/>
+    /// serves — the adapter's live bar interval.</summary>
+    long BarIntervalMs { get; }
+
     /// <summary>Up to <paramref name="count"/> most recent closed bars at the
     /// adapter's live bar interval, oldest first, in engine fixed point.</summary>
     Task<IReadOnlyList<Bar>> RecentBarsAsync(

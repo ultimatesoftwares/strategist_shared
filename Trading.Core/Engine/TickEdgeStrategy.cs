@@ -21,8 +21,15 @@ namespace Trading.Core.Engine;
 /// micro-bar when a tick arrives in a later bucket. The tick count is the
 /// bar volume.</item>
 /// <item>Warm-up needs <see cref="BarFeatures.Warmup"/> + 1 closed
-/// micro-bars per symbol, built from live ticks (venue bar history cannot
-/// warm micro-bars, so <see cref="WarmupBars"/> is 0).</item>
+/// micro-bars per symbol. The window builds from live ticks, but hosts may
+/// pre-seed it with closed history bars at exactly the <see cref="BarMs"/>
+/// interval (<see cref="WarmupBars"/>/<see cref="IStrategy.WarmupBarIntervalMs"/>),
+/// including bars from another venue of the same instrument: seeded closes
+/// are queued by <see cref="WarmBar"/> and rebased multiplicatively onto the
+/// symbol's first live mid before folding in — log-return features are
+/// shift-invariant, so the rebase preserves them exactly while removing
+/// cross-venue price-level offsets and clock skew (seeded bars get synthetic
+/// times directly behind the first live bucket).</item>
 /// <item>Per closed micro-bar: cancel working orders and wait, otherwise
 /// enter against the stretch when flat (|Z60| ≥ <see cref="MlStrategy.EdgeEntryZ"/>
 /// and Score ≥ the minimum edge; short above the mean, long below) or
@@ -76,6 +83,9 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
     private readonly long _maxHoldBars;
     private readonly IReadOnlyList<int> _featureIndexes;
     private readonly Dictionary<uint, SymbolState> _state = [];
+    /// <summary>History closes queued by <see cref="WarmBar"/>, awaiting the
+    /// symbol's first live tick to be rebased and folded into the window.</summary>
+    private readonly Dictionary<uint, List<(double Close, double Volume)>> _pendingWarm = [];
     // Reused per event: the engine is single-threaded by contract.
     private readonly float[] _features;
     private readonly double[] _barFeatures = new double[BarFeatures.Names.Count];
@@ -171,9 +181,32 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
     public StrategyDecision? LastDecision => _lastDecision;
 
-    /// <summary>Venue-interval bar history cannot warm micro-bars: the window
-    /// warms from live ticks only (see the class remarks).</summary>
-    public int WarmupBars => 0;
+    /// <summary>Closed bars the host may pre-seed through <see cref="WarmBar"/>
+    /// (at the <see cref="BarMs"/> interval — see <see cref="WarmupBarIntervalMs"/>).</summary>
+    public int WarmupBars => BarFeatureWindow.WarmTarget;
+
+    /// <summary>Only bars at exactly the micro-bar interval can seed the window.</summary>
+    public long WarmupBarIntervalMs => BarMs;
+
+    /// <summary>
+    /// Queue a history bar for the symbol's window. The bars may come from
+    /// another venue of the same instrument, so they are not folded in
+    /// directly: the symbol's first live tick rebases every queued close
+    /// multiplicatively onto the live mid (log-return features are
+    /// shift-invariant, so the rebase is exact) and assigns synthetic bar
+    /// times directly behind the live bucket, stitching the histories without
+    /// a fake level-jump return or venue clock-skew problems.
+    /// </summary>
+    public void WarmBar(in Bar bar)
+    {
+        if (_poisoned || bar.Close <= 0)
+            return;
+        if (!_pendingWarm.TryGetValue(bar.SymbolId, out var pending))
+            _pendingWarm[bar.SymbolId] = pending = new(BarFeatureWindow.WarmTarget);
+        pending.Add((bar.Close, bar.Volume));
+        if (pending.Count > BarFeatureWindow.WarmTarget)
+            pending.RemoveAt(0);
+    }
 
     /// <summary>Tick-driven: book deltas carry no extra signal.</summary>
     public void OnBook(in StrategyContext ctx, List<Intent> output)
@@ -221,6 +254,22 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
         var mid = (tick.Bid / 2.0) + (tick.Ask / 2.0);
         var tsMs = (long)(tick.TsNanos / 1_000_000UL);
         var bucket = tsMs - tsMs % BarMs;
+
+        // Seeded history folds in on the symbol's first live tick (see WarmBar).
+        if (_pendingWarm.Count > 0 && _pendingWarm.Remove(ctx.SymbolId, out var pending)
+            && state.Window.Count == 0 && pending.Count > 0)
+        {
+            var factor = mid / pending[^1].Close;
+            for (var k = 0; k < pending.Count; k++)
+            {
+                state.Window.Add(
+                    bucket - (pending.Count - k) * BarMs,
+                    pending[k].Close * factor, pending[k].Volume);
+            }
+            _lastDecision = new StrategyDecision(double.NaN, DecisionStatus.Warmup,
+                "Seeded with venue bar history; live micro-bars resume the window.",
+                WarmupCount: state.Window.Count, WarmupTarget: BarFeatureWindow.WarmTarget);
+        }
 
         if (state.BucketStartMs == long.MinValue)
         {

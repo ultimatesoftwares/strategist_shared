@@ -72,6 +72,16 @@ public interface IStrategy
     int WarmupBars => 0;
 
     /// <summary>
+    /// Bar interval (in ms) that <see cref="WarmBar"/> history must have.
+    /// 0 means the venue's native interval (whatever <see cref="OnBar"/>
+    /// receives) — appropriate for strategies that consume venue bars as-is.
+    /// A positive value lets hosts match other history sources (including
+    /// sibling venues of the same instrument) against the strategy's own
+    /// aggregation; hosts must not feed bars at a different interval.
+    /// </summary>
+    long WarmupBarIntervalMs => 0;
+
+    /// <summary>
     /// Fold a historical bar into the strategy's state without trading on
     /// it (warm-up only, oldest first, before live bars). Default: no-op.
     /// </summary>

@@ -120,6 +120,9 @@ public sealed class TradingEngine : IDisposable
     /// <summary>Closed bars the strategy needs before its first decision.</summary>
     public int StrategyWarmupBars => _strategy.WarmupBars;
 
+    /// <summary>Bar interval (ms) warm-up history must have; 0 = venue-native.</summary>
+    public long StrategyWarmupBarIntervalMs => _strategy.WarmupBarIntervalMs;
+
     /// <summary>
     /// Pre-feed a historical bar for warm-up: the strategy folds it into its
     /// state but cannot emit orders. Call on the engine thread (or before
