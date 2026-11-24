@@ -173,8 +173,9 @@ public static class StrategyFactory
 {
     /// <summary>
     /// Create the configured strategy. Every trading strategy must be
-    /// ML-driven (<see cref="StrategyKind.Ml"/>/<see cref="StrategyKind.TickMl"/>
-    /// over an ML.NET model.zip); <see cref="StrategyKind.Null"/> is allowed
+    /// ML-driven (<see cref="StrategyKind.Ml"/>/<see cref="StrategyKind.TickMl"/>/
+    /// <see cref="StrategyKind.TickEdge"/> over an ML.NET model.zip);
+    /// <see cref="StrategyKind.Null"/> is allowed
     /// as the non-trading placeholder. Throws
     /// <see cref="InvalidOperationException"/> for the retired non-ML
     /// <see cref="StrategyKind.ImbalanceQuoter"/>, unknown kinds, missing
@@ -183,7 +184,7 @@ public static class StrategyFactory
     public static IStrategy Create(StrategyConfig config) => config.Kind switch
     {
         StrategyKind.ImbalanceQuoter => throw new InvalidOperationException(
-            "the imbalanceQuoter strategy was retired: every trading strategy must be ML-driven (ml/tickMl over an ML.NET model.zip)"),
+            "the imbalanceQuoter strategy was retired: every trading strategy must be ML-driven (ml/tickMl/tickEdge over an ML.NET model.zip)"),
         StrategyKind.Ml => string.IsNullOrEmpty(config.ModelPath)
             ? throw new InvalidOperationException("ml strategy requires a model path")
             : MlStrategy.FromFile(
@@ -193,6 +194,11 @@ public static class StrategyFactory
             ? throw new InvalidOperationException("tickMl strategy requires a model path")
             : TickMlStrategy.FromFile(config.ModelPath, config.OrderQty,
                 config.EntryThresholdBps, config.ExitThresholdBps),
+        StrategyKind.TickEdge => string.IsNullOrEmpty(config.ModelPath)
+            ? throw new InvalidOperationException("tickEdge strategy requires a model path")
+            : TickEdgeStrategy.FromFile(config.ModelPath, config.OrderQty,
+                config.EntryThresholdBps, config.ExitThresholdBps, config.MaxHoldBars,
+                config.TickBarMs),
         StrategyKind.Null => new NullStrategy(),
         _ => throw new InvalidOperationException($"unknown strategy kind {(uint)config.Kind}"),
     };

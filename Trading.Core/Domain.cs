@@ -65,6 +65,10 @@ public enum StrategyKind : uint
     Ml = 2,
     /// <summary>Experimental tick-driven ML.NET classifier; intended for observe-only evaluation.</summary>
     TickMl = 3,
+    /// <summary>High-frequency edge strategy: quote ticks are aggregated into fixed
+    /// micro-bars driving an edge-model decision per closed micro-bar, with a
+    /// tick-level stop loss (see Engine/TickEdgeStrategy.cs).</summary>
+    TickEdge = 4,
 }
 
 /// <summary>Strategy selection + parameters, passed to the engine at creation. 0 = strategy default.</summary>
@@ -73,15 +77,19 @@ public enum StrategyKind : uint
 /// the P(up) entry threshold in bps of probability (6000 = 0.60; default).
 /// <see cref="ExitThresholdBps"/> and <see cref="MaxHoldBars"/> apply to Ml
 /// only: the P(up) exit threshold (default 5000 = 0.50) and the maximum
-/// holding time in closed bars (default 5). <see cref="ModelPath"/> is
-/// required for Ml and TickMl — the only kinds that trade.
+/// holding time in closed bars (default 5). For <see cref="StrategyKind.TickEdge"/>
+/// the thresholds are the edge-mode parameters instead: the minimum predicted
+/// edge in bps (entry), the stop loss in bps (exit), the maximum hold in closed
+/// micro-bars, and <see cref="TickBarMs"/> as the micro-bar length in
+/// milliseconds (0 = 1000). <see cref="ModelPath"/> is required for Ml, TickMl
+/// and TickEdge — the only kinds that trade.
 /// </remarks>
 public readonly record struct StrategyConfig(
     StrategyKind Kind, long EntryThresholdBps = 0, ulong OrderQty = 0, string? ModelPath = null,
-    long ExitThresholdBps = 0, long MaxHoldBars = 0)
+    long ExitThresholdBps = 0, long MaxHoldBars = 0, long TickBarMs = 0)
 {
     /// <summary>No model, no trading: the default is the non-trading Null
-    /// strategy. Trading requires an explicit ML config (Ml/TickMl + model).</summary>
+    /// strategy. Trading requires an explicit ML config (Ml/TickMl/TickEdge + model).</summary>
     public static StrategyConfig Default => new(StrategyKind.Null);
 
     /// <summary>Stable journal descriptor, e.g. "imbalance_quoter" or "ml:models/x.zip".</summary>
@@ -89,6 +97,7 @@ public readonly record struct StrategyConfig(
     {
         StrategyKind.Ml => $"ml:{ModelPath}",
         StrategyKind.TickMl => $"tick_ml:{ModelPath}",
+        StrategyKind.TickEdge => $"tick_edge:{ModelPath}",
         StrategyKind.Null => "null",
         _ => "imbalance_quoter",
     };
