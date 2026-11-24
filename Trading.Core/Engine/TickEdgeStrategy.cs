@@ -164,6 +164,11 @@ public sealed class TickEdgeStrategy : IStrategy, IDisposable
 
     public bool RequiresAtomicQuotes => true;
 
+    /// <summary>Quotes may legitimately pause for a good part of a micro-bar:
+    /// only a silence longer than one full bar invalidates the window (a
+    /// sparse bucket still closes correctly on the next tick).</summary>
+    public TimeSpan QuoteGapTolerance => TimeSpan.FromMilliseconds(BarMs);
+
     public StrategyDecision? LastDecision => _lastDecision;
 
     /// <summary>Venue-interval bar history cannot warm micro-bars: the window

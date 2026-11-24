@@ -31,6 +31,9 @@ public sealed class TradingEngine : IDisposable
     public event Action<OrderCommand>? OrderCommandReceived;
     public bool RequiresAtomicQuotes => _strategy.RequiresAtomicQuotes;
 
+    /// <summary>The strategy's quote-silence tolerance (see <see cref="IStrategy.QuoteGapTolerance"/>).</summary>
+    public TimeSpan QuoteGapTolerance => _strategy.QuoteGapTolerance;
+
     /// <summary>
     /// Create the engine with the given limits and strategy. Throws
     /// <see cref="InvalidOperationException"/> when the strategy

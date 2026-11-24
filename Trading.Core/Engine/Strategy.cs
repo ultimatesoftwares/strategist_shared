@@ -34,6 +34,16 @@ public interface IStrategy
     /// <summary>Whether this strategy requires atomic quotes rather than book deltas.</summary>
     bool RequiresAtomicQuotes => false;
 
+    /// <summary>
+    /// Longest quote silence an atomic-quote strategy tolerates before the
+    /// host must declare a quote gap (<see cref="OnQuoteGap"/>). The default
+    /// suits tick-cadence strategies over ~1-second micro-bars; strategies
+    /// aggregating longer micro-bars should scale this with their bar length,
+    /// or sparse-but-healthy markets keep resetting their warm-up. The host
+    /// clamps values below one second up to it.
+    /// </summary>
+    TimeSpan QuoteGapTolerance => TimeSpan.FromSeconds(1);
+
     /// <summary>Invalidate state after a queued quote exceeded its processing deadline.</summary>
     void OnQuoteGap(in StrategyContext ctx, List<Intent> output) { }
 

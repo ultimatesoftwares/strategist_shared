@@ -65,7 +65,9 @@ public sealed class EngineHost
     private long _orderTimingEvictions;
     private long _expiredQuotes;
     private static readonly TimeSpan QuoteDeadline = TimeSpan.FromMilliseconds(100);
-    private static readonly TimeSpan QuoteGap = TimeSpan.FromSeconds(1);
+    /// <summary>Strategy-declared quote-silence tolerance (min 1s): longer
+    /// silences invalidate the symbol via <see cref="TradingEngine.PublishQuoteGap"/>.</summary>
+    private readonly TimeSpan _quoteGap;
     private readonly Dictionary<uint, long> _lastQuoteArrival = [];
     private int _watchdogQueued;
 
@@ -165,6 +167,8 @@ public sealed class EngineHost
         _name = name;
         _logFills = logFills;
         _recorder = recorder;
+        var tolerance = engine.QuoteGapTolerance;
+        _quoteGap = tolerance > TimeSpan.FromSeconds(1) ? tolerance : TimeSpan.FromSeconds(1);
 
         if (engine.RequiresAtomicQuotes)
         {
@@ -211,7 +215,7 @@ public sealed class EngineHost
                         var quoteStarted = Stopwatch.GetTimestamp();
                         _marketQueueLatency.Observe(quoteStarted - quote.EnqueuedAt);
                         if (_lastQuoteArrival.TryGetValue(quote.Tick.SymbolId, out var previousQuote)
-                            && Stopwatch.GetElapsedTime(previousQuote, quote.EnqueuedAt) > QuoteGap)
+                            && Stopwatch.GetElapsedTime(previousQuote, quote.EnqueuedAt) > _quoteGap)
                             _engine.PublishQuoteGap(quote.Tick.SymbolId);
                         _lastQuoteArrival[quote.Tick.SymbolId] = quote.EnqueuedAt;
                         if (Stopwatch.GetElapsedTime(quote.EnqueuedAt, quoteStarted) > QuoteDeadline)
@@ -244,7 +248,7 @@ public sealed class EngineHost
                         Interlocked.Exchange(ref _watchdogQueued, 0);
                         var watchdogNow = Stopwatch.GetTimestamp();
                         foreach (var symbol in _lastQuoteArrival
-                            .Where(p => Stopwatch.GetElapsedTime(p.Value, watchdogNow) > QuoteGap)
+                            .Where(p => Stopwatch.GetElapsedTime(p.Value, watchdogNow) > _quoteGap)
                             .Select(p => p.Key).ToArray())
                         {
                             _lastQuoteArrival.Remove(symbol);
